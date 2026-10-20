@@ -1,0 +1,11 @@
+goaly-venv/
+.streamlit/secrets.toml
+__pycache__/
+.pytest_cache/
+.DS_Store
+.env
+.env.*
+*.log
+.venv/
+venv/
+secrets.toml
