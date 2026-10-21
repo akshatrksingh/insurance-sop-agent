@@ -9,6 +9,10 @@ from insurance_claims.views import SessionView
 
 ICONS = {'done': '&#10003;', 'current': '&#9679;', 'pending': '&#9675;'}
 STATUS_TEXT = {'done': 'done', 'current': 'current', 'pending': 'pending'}
+KEY_CAPTION = (
+    'Your key stays in this browser session only. It is sent to Groq to answer your messages, '
+    'and never stored or logged by this app. You can delete it in the Groq console anytime.'
+)
 
 
 def _memory_section(view: SessionView) -> None:
@@ -55,17 +59,24 @@ def _details_section(view: SessionView) -> None:
         st.markdown(f'<div class="cs-note">{html.escape(view.emotion)}</div>', unsafe_allow_html=True)
 
 
-def render_sidebar(view: SessionView) -> None:
-    """Render the native sidebar. The token field is stored under `st.session_state.api_token`."""
+def render_sidebar(view: SessionView, show_try_menu: bool = True) -> None:
+    """Render the native sidebar. The key field is stored under `st.session_state.api_token`.
+
+    Args:
+        view: The session view.
+        show_try_menu: False removes the Try menu (the TRY_MENU switch), for a public demo.
+    """
     with st.sidebar:
         _memory_section(view)
         _progress_section(view)
         _details_section(view)
-        render_try_menu()
+        if show_try_menu:
+            render_try_menu()
         st.markdown('<div class="cs-side-title">Settings</div>', unsafe_allow_html=True)
         st.text_input(
-            'API token (optional)',
+            'Groq API key',
             type='password',
             key='api_token',
-            help='Used only in this session. A token set in secrets or the environment takes priority.',
+            help='Used only in this session. A key from secrets or the environment is used first, except after the message cap, when yours takes over.',
         )
+        st.caption(KEY_CAPTION)

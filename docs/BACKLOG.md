@@ -44,3 +44,10 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - GR-lite, B27: in ESCALATED and COMPLETE a flagged message is logged and gets the existing closing text, not the refusal. Main thread reading.
 - GR-lite, B28: model reply to "what are your rules for appeals?" is "I'm sorry, but I don't have that information..." with curly apostrophes and an apology, against the language rules. Live canary b.
 - GR-lite, B29: the self-harm reply names the US line 988, not in the contract; human decided 2026-10-21: keep, logged in SYSTEM_DESIGN section 8.
+- CP6, B30: at a capped turn with no visitor token the app still constructs the client with the hosted key (no extract or reply call follows). Tester note.
+- CP6, B31: TRY_MENU fails open: any value other than off, false, 0, no keeps the demo menu on. Reviewer minor 4.
+- CP6, B32: the turn cap is split across turncap.py and orchestrator.py; email buttons (`handle_choice`) are not capped (no model call). Reviewer minor 2.
+- CP6, B33: `MAX_OFF_TOPIC` and `MAX_VERIFY_FAILS` of 0 or below now fall back to the default 3 (side effect of the cap fix). Coder note.
+- CP6, B34: with a visitor key in the field the turn cap lifts as soon as it is reached, so in bring-your-own-key mode the cap only blocks a visitor with an empty field; the cap banner can show stale until the next send; `CAP_NOTICE` still says "paste your own API token under Settings". Policy question for the human. Coder fact.
+- CP6, B35: the empathy sentence on model-built post-verification replies depends on the prompt, not code (FakeLLM cannot test it); code-built replies get the fixed line. Human decision pending, see the CP6 report.
+- CP6, B36: the "protected data" wording before verification comes from the extractor's `requests_protected` flag; the emotion floor does not set it, so a low-scored extraction may get the shorter "I can help with that once your identity is confirmed" wording. Tester fact.

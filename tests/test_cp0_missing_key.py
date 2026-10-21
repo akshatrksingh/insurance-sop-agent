@@ -9,7 +9,7 @@ def test_del_01_missing_key_notice_at_page_load(no_key):
     at = app().run()
     assert not at.exception
     notices = [e.value for e in at.error] + [e.value for e in at.warning] + [e.value for e in at.info]
-    assert any('LLM_API_KEY' in n for n in notices)
+    assert 'Paste your Groq key in the sidebar to start.' in notices
 
 
 def test_del_01_missing_key_notice_after_first_message(no_key):
@@ -17,7 +17,7 @@ def test_del_01_missing_key_notice_after_first_message(no_key):
     at = app().run()
     at.chat_input[0].set_value('hello').run()
     notices = [e.value for e in at.error] + [e.value for e in at.warning] + [e.value for e in at.info]
-    assert any('LLM_API_KEY' in n for n in notices)
+    assert 'Paste your Groq key in the sidebar to start.' in notices
 
 
 def test_del_01_missing_key_notice_clears_when_token_pasted(no_key, monkeypatch):

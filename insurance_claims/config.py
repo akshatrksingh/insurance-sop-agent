@@ -20,6 +20,7 @@ class Settings(BaseModel):
     max_off_topic: int = 3
     max_verify_fails: int = 3
     max_turns: int = 40
+    try_menu: bool = True
 
 
 def _lookup(name: str) -> str | None:
@@ -34,16 +35,19 @@ def _lookup(name: str) -> str | None:
     return text or None
 
 
-def load_settings(sidebar_token: str = '') -> Settings:
+def load_settings(sidebar_token: str = '', prefer_token: bool = False) -> Settings:
     """Build settings. The API key order is secrets, env var, then the sidebar field.
 
     Args:
         sidebar_token: Token typed by the visitor in the sidebar, may be empty.
+        prefer_token: When True and a sidebar token is given, it wins over secrets and the environment.
 
     Returns:
         The resolved settings. `api_key` is None when no key is available.
     """
-    key = _lookup('LLM_API_KEY') or sidebar_token.strip() or None
+    own = sidebar_token.strip()
+    key = (own or _lookup('LLM_API_KEY')) if prefer_token else (_lookup('LLM_API_KEY') or own)
+    key = key or None
     values: dict[str, object] = {'api_key': SecretStr(key) if key else None}
     for field, name in (
         ('base_url', 'LLM_BASE_URL'),
@@ -59,8 +63,11 @@ def load_settings(sidebar_token: str = '') -> Settings:
         ('max_turns', 'MAX_TURNS'),
     ):
         found = _lookup(name)
-        if found and found.isdigit():
+        if found and found.isdigit() and int(found) > 0:  # 0 never disables a limit
             values[field] = int(found)
+    switch = _lookup('TRY_MENU')
+    if switch and switch.lower() in ('0', 'false', 'off', 'no'):
+        values['try_menu'] = False
     return Settings(**values)
 
 

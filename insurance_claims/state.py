@@ -51,6 +51,7 @@ class Session(BaseModel):
     pending_question: str | None = None  # the one open yes/no question: 'email', 'human', or None
     topics: list[str] = []
     turn_count: int = 0
+    cap_lifted: bool = False
     turns: list[tuple[str, str]] = []
     events: list[Event] = []
     extracted_fields: list[str] = []

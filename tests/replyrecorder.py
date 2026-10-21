@@ -1,5 +1,13 @@
 """Records every reply produced by handle_turn anywhere in the suite, with the context needed to scan it."""
+import re
+
 import insurance_claims.orchestrator as orchestrator
+
+# Test side copy of the emotion floor phrases (CP6). A message holding one counts as intensity 2 for the scans.
+FLOOR_PHRASES = ['ridiculous', 'useless', 'unacceptable', 'i already told you', 'this is a joke', 'fed up', 'sick of this',
+                 'waste of time', 'outrageous', 'unbelievable']
+FLOOR_RE = re.compile(r'(?<!\w)(' + '|'.join(re.escape(p) for p in FLOOR_PHRASES) + r')(?!\w)', re.I)
+NEGATIVE = ('frustration', 'anger', 'anxiety')
 
 RECORDS = []
 _original = orchestrator.handle_turn
@@ -44,6 +52,9 @@ def recording_handle_turn(session, text, llm):
             del llm.extract
         except Exception:
             pass
+    if FLOOR_RE.search(text or ''):
+        box['intensity'] = max(box['intensity'], 2)
+        box['label'] = box['label'] if box['label'] in NEGATIVE else 'frustration'
     rows = session.view().model_dump()['memory_rows']
     strikes = next((int(r['value']) for r in rows if r['label'] == 'Off-topic strikes'), 0)
     RECORDS.append({'reply': result.reply, 'prior_agent': prior, 'intensity': box['intensity'],

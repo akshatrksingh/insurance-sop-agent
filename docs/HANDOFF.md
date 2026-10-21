@@ -3,12 +3,12 @@
 Main thread = coordinator. It never implements and never runs git. Subagents (`.claude/agents/`): coder, tester, reviewer. Read order: `docs/CLAUDE.md`, this file, `docs/BACKLOG.md`, `ASSIGNMENT.md`, `SYSTEM_DESIGN.md`, `CODING_GUIDELINES.md`, `FRONTEND_GUIDELINES.md`, `DEV_STAGES.md`. The human owns approvals, git and the final Try script.
 
 ## State
-- Approved, committed, tagged and pushed (repo https://github.com/akshatrksingh/insurance-sop-agent): CP0 `cp-0`, CP1 `cp-1`, CP2 `cp-2`, CP3 `cp-3` ( scope.py split into allowlist.py and injection.py, guidance.py added), GR-lite built (gr_lite.py, gr_patterns.py, gr_log.py, gr_text.py), pending your push (tag `gr-lite`), CP4 `cp-4` (scope guard, email offer, consent, summary, mock send, SAFE-05), CP5 `cp-5` (emotion, resistance, handoff, VER-07, S2, S4, S8).
-- Remaining order: CP6. Then the heavy final passes, the final Try script and the deploy steps.
+- Approved, committed, tagged and pushed (repo https://github.com/akshatrksingh/insurance-sop-agent): CP0 `cp-0`, CP1 `cp-1`, CP2 `cp-2`, CP3 `cp-3` ( scope.py split into allowlist.py and injection.py, guidance.py added), GR-lite built (gr_lite.py, gr_patterns.py, gr_log.py, gr_text.py), `gr-lite`, CP6 built (README, turn cap, Try menu switch, failed turns), pending your push (tag `cp-6`), CP4 `cp-4` (scope guard, email offer, consent, summary, mock send, SAFE-05), CP5 `cp-5` (emotion, resistance, handoff, VER-07, S2, S4, S8).
+- Remaining order: the heavy final passes, the final Try script and the deploy steps.
   - CP3: match follow-ups to `required_document_guideline.json`, recommend a human representative when items or substitutes cannot be obtained, keep the other-party refusal (INT-03, CASE-02, CASE-03, S9).
   - GR-lite (code only, no extra model calls): system-probe and harmful pattern list with fixed refusal, no state change, fixed notice; one redacted stdout log line per flagged message; supportive fixed self-harm reply with human offer; "show me all my claims" must not count as injection; injection text with an off-topic request still earns the strike; "Message flagged" inline event; SAFE-07..09; about 30 labeled phrases with 15 benign controls, zero false positives.
   - CP6: update README, hosted deploy steps, final Try script, turn cap (NFR-08), key events inline in order, consecutive failed turns show every caller message, Try menu switchable off for the deployed demo. Cut: glass CSS (Tier 2 waiver), throttle, full NFR measurement (report calls per turn and suite time only).
-- Last offline suite (main thread, one command): 1947 passed, 1 skipped, about 24 s (after GR-lite).
+- Last offline suite (main thread, one command): 2077 passed, 1 skipped, about 27 s (after CP6 with emotion floor and BYOK).
 
 ## Carry-overs
 - `scope.py` split done (68 lines; `injection.py` has room for GR-lite).
@@ -19,6 +19,9 @@ Main thread = coordinator. It never implements and never runs git. Subagents (`.
 Stack and LLM; palette; Tier 2 waivable, Tier 1 never; CL-2048 appeal rule; VER-06 reading; NFR-01 deviation (worst case 3 calls); fixed empathy lines before verification; guard model CUT and replaced by GR-lite; CP3 small; CP6 scope and glass waiver; first-person refusals ("I cannot file appeals") allowed in grounding; a click on Send summary is explicit consent, same path as typing yes; the email preview card (`EmailPreview.to` shown in the card only) approved.
 - EMO-03 (human, approved): handoff comes on the third resistance round (the first round plus 2 more), on anger intensity 3, or on any explicit request for a human. The emotion-only reply (empathy line, redirect to the claim, no strike) stays as built.
 - Code-built reply rules: the first post-verification case reply and single-field follow-ups are built in code from the bundle (`grounded.py`), no model call. Open-ended and multi-field follow-ups use the model with the grounding check, then one regeneration, then code fallback. One pending question at a time (`Session.pending_question`: email or human); a human offer is valid for one turn.
+
+## CP6 additions (human, 2026-10-21)
+- Emotion floor (`emotion_floor.py`, Tier 1 safeguard) raises intensity to 2 for explicit anger phrases. Public deploy is bring-your-own-key: LLM_API_KEY not in Secrets, TRY_MENU = "off", visitors paste a Groq key (caption under the field, Reset clears it).
 
 ## Light token regime (human, until the MVP stages are done)
 - Per stage the coder builds. The tester writes tests only for the stage's new requirement IDs and runs just those. The main thread runs the full offline suite itself with one shell command and reads only the counts. 2 live canaries per stage on the stage's main behavior. Coder never runs the full suite.

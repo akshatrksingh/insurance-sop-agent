@@ -4,15 +4,18 @@ import logging
 
 from pydantic import BaseModel
 
+from insurance_claims.emotion_floor import apply_floor
 from insurance_claims.extractor import Extraction
 from insurance_claims import gr_lite
 from insurance_claims.flow import build_reply
 from insurance_claims.handoff import CLOSED, HANDOFF_AGAIN
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
+from insurance_claims.config import load_settings
 from insurance_claims.phases import update_state
 from insurance_claims.postprocess import decide
 from insurance_claims.scope import emotional_only, reconcile
 from insurance_claims.state import Session
+from insurance_claims.turncap import CAP_NOTICE, cap_reached
 from insurance_claims.views import EmailPreview, Event
 
 logger = logging.getLogger(__name__)
@@ -27,6 +30,7 @@ class TurnResult(BaseModel):
     reply: str
     events: list[Event] = []
     email_preview: EmailPreview | None = None
+    capped: bool = False
 
 
 def new_session() -> Session:
@@ -64,7 +68,9 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
         llm: An `OpenAICompatLLM` or `FakeLLM`.
 
     Returns:
-        The reply and any new events. A rejected message returns a notice and counts as no turn.
+        The reply and any new events. At the MAX_TURNS cap (NFR-08) the
+        result has `capped` set and nothing changes, unless the visitor lifted the cap.
+        A rejected message returns a notice and counts as no turn.
         State is committed only after the reply succeeds. After a handoff or the end of the call
         the reply is fixed and no model is called.
 
@@ -80,6 +86,8 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
     if notice:
         session.turns.append(('Agent', notice))
         return TurnResult(reply=notice)
+    if cap_reached(session, load_settings().max_turns):  # NFR-08: before any model call, flagged turns count too
+        return TurnResult(reply=CAP_NOTICE, capped=True)
     draft = session.model_copy(deep=True)
     old_phase = draft.phase
     draft.turns.append(('Caller', message))
@@ -100,6 +108,18 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
     reply, more, preview = build_reply(draft, extraction, message, old_phase, llm, complaint)
     _finish(session, draft, old_phase, reply, more)
     return TurnResult(reply=reply, events=events + more, email_preview=preview)
+
+
+def record_failed(session: Session, text: str) -> None:
+    """Keep the caller message of a failed turn in the transcript, with no reply and no state change.
+
+    Args:
+        session: The session, updated in place.
+        text: The caller's message. Empty text is ignored.
+    """
+    message = text.strip()
+    if message:
+        session.turns.append(('Caller', message))
 
 
 def handle_choice(session: Session, choice: str) -> TurnResult:
@@ -127,9 +147,10 @@ def handle_choice(session: Session, choice: str) -> TurnResult:
 
 
 def _read(llm: OpenAICompatLLM | FakeLLM, message: str, session: Session) -> Extraction:
-    """Run the extractor. Anything that is not a valid Extraction becomes an empty one."""
+    """Run the extractor and apply the emotion floor. Anything that is not a valid Extraction becomes an empty one."""
     try:
-        return Extraction.model_validate(llm.extract(message, session.view()))
+        extraction = Extraction.model_validate(llm.extract(message, session.view()))
     except (ValueError, TypeError) as exc:
         logger.warning('Extractor output rejected: %s (session=%s)', type(exc).__name__, session.session_id)
-        return Extraction()
+        extraction = Extraction()
+    return apply_floor(extraction, message)

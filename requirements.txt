@@ -1,4 +1,4 @@
-streamlit
-pydantic
-openai
-pytest
+streamlit>=1.40
+pydantic>=2.7
+openai>=1.40
+pytest>=8.0

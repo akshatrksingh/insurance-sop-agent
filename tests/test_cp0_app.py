@@ -58,7 +58,7 @@ def test_del_01_missing_key_gives_plain_error_no_traceback(no_key):
     assert not at.exception
     assert len(at.error) == 1
     msg = at.error[0].value
-    assert 'LLM_API_KEY' in msg and 'Traceback' not in msg
+    assert msg == 'Paste your Groq key in the sidebar to start.' and 'Traceback' not in msg
     assert 'Traceback' not in all_text(at)
     assert not any(d in msg for d in DASHES) and '!' not in msg
 
