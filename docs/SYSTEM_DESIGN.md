@@ -318,6 +318,8 @@ If this file is silent or contradictory: stop, ask the human, log the answer bel
 | 2026-10-20 | Grounding (human decision): first person refusals such as "I cannot file appeals" and "We can't reopen it" are allowed in `grounding`. Other subjects and outcome claims stay flagged. |
 | 2026-10-20 | Consent (human decision): a click on the Send summary button counts as explicit consent, on the same code path as typing yes. |
 | 2026-10-20 | Process (human decision): tester and reviewer run lighter per stage until the MVP stages are done. Then one full tester pass and one full tree reviewer pass run before the deploy. |
+| 2026-10-21 | Self-harm reply (human decision, contract addition): the fixed supportive reply of SAFE-08 names the US crisis line 988 ("In the US you can call or text 988"). The contract text said only a short fixed supportive reply with a human offer. Kept as built. |
+| 2026-10-21 | GR-lite review readings (human decision): a message with both a probe phrase and an off-topic request gets the refusal and no strike (SAFE-07 no state change wins); in ESCALATED and COMPLETE a flagged message is logged and gets the existing closing text. Both accepted as built. CODING_GUIDELINES logging section now names the GR-lite flag log as the only logging exception. |
 
 Changelog:
 - 2026-10-20 CP1: added `insurance_claims/views.py` (view models, phase and factor constants, `build_view`) to keep `state.py` under the length rule. `state.py` re-exports `Event` and `SessionView`.
