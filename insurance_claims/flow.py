@@ -13,7 +13,8 @@ from insurance_claims.llm import FakeLLM, OpenAICompatLLM
 from insurance_claims.phases import mark_answered
 from insurance_claims.responder import compose_reply
 from insurance_claims.state import Session
-from insurance_claims.templates import verify_reply
+from insurance_claims.config import verify_fail_limit
+from insurance_claims.templates import empathy_line, verify_reply
 from insurance_claims.views import EmailPreview, Event
 
 Result = tuple[str, list[Event], EmailPreview | None]
@@ -24,15 +25,23 @@ def email_pending(session: Session, old_phase: str) -> bool:
     return old_phase == 'POST_PROCESS' and session.gates.email_offered and not session.gates.email_choice_made
 
 
+def _failed_round_over_limit(session: Session) -> bool:
+    """True when this turn was a failed verification round and the rounds have reached MAX_VERIFY_FAILS."""
+    here = len(session.turns)
+    failed_now = any(e.kind == 'verify_round' and e.at == here for e in session.events)
+    return failed_now and session.failed_rounds >= verify_fail_limit()
+
+
 def _answer(session: Session, message: str, verified_now: bool, llm: OpenAICompatLLM | FakeLLM) -> str:
     """Build the case or intent reply for a verified caller and mark the case answered."""
     prompt_name, bundle = build_bundle(session, message, verified_now)
-    if prompt_name == 'process_case' and bundle['first_answer']:
-        reply = first_reply(bundle)  # the first claim answer is built by code from the bundle
-    else:
-        reply = (field_reply(bundle) if prompt_name == 'process_case' else None) or compose_reply(
-            llm, prompt_name, bundle
-        )
+    is_case = prompt_name == 'process_case'
+    # The first claim answer and single-field answers are built by code from the bundle.
+    reply = first_reply(bundle) if is_case and bundle['first_answer'] else (field_reply(bundle) if is_case else None)
+    if reply is None:
+        reply = compose_reply(llm, prompt_name, bundle)  # the prompt handles emotion for model text
+    elif empathy_line(session):
+        reply = f'{empathy_line(session)} {reply}'
     if session.phase == 'PROCESS_CASE':
         postprocess.note_topic(session, message)
     mark_answered(session)
@@ -55,10 +64,12 @@ def _verified_flow(session: Session, ex: Extraction, message: str, old_phase: st
     return reply, events, None
 
 
-def build_reply(session: Session, ex: Extraction, message: str, old_phase: str, llm: OpenAICompatLLM | FakeLLM) -> Result:
+def build_reply(session: Session, ex: Extraction, message: str, old_phase: str, llm: OpenAICompatLLM | FakeLLM, complaint: bool = False
+) -> Result:
     """Choose the reply for this turn, after the state update.
 
-    Order: human handoff accepted, off-topic decline or offer, verification templates (with the
+    Order: handoff when persuasion stops (human request, anger 3, resistance limit), answer to an open
+    human offer, off-topic decline or offer, VER-07 human offer, verification templates (with the
     SAFE-05 scan), the email choice, then the case flow.
 
     Args:
@@ -67,21 +78,34 @@ def build_reply(session: Session, ex: Extraction, message: str, old_phase: str, 
         message: The caller's text.
         old_phase: The phase before this turn.
         llm: Used only for model replies in the case flow.
+        complaint: True for an emotion-only message the extractor called out of scope (no strike).
 
     Returns:
         The reply, new events, and the email preview when one was sent.
     """
     pending = email_pending(session, old_phase)
-    answer = handoff.human_answer(session, ex)  # one open question at a time: a yes answers only that one
+    if handoff.emotion_handoff(session, ex):  # persuasion stops: a request for a human, anger 3, or resistance
+        reply, events = handoff.escalate(session)
+        return reply, events, None
+    answer = handoff.human_answer(session, ex, message)  # one open question at a time: a yes answers only that one
+    if session.pending_question == 'human' and answer is None:
+        handoff.drop_human_offer(session, pending)  # an offer is valid for the next turn only
     if answer == 'yes':
         reply, events = handoff.escalate(session)
         return reply, events, None
     if answer == 'no':
-        return handoff.decline_human(session, pending), [], None
-    if pending and session.pending_question == 'human' and ex.in_scope:
-        return handoff.HUMAN_OFFER, [], None  # unanswered: ask the open question again, never email
+        reply = handoff.decline_human(session, pending)
+        return (verify_reply(session, ex) if session.phase == 'VERIFY_ID' else reply), [], None
+    if complaint and session.phase != 'VERIFY_ID':  # empathy first, then back to the claim; no gate moves
+        line = empathy_line(session, 1) or ''
+        return f'{line} {handoff.EMAIL_REDIRECT if pending else handoff.REDIRECT}'.strip(), [], None
     if not ex.in_scope and (handoff.offer_due(session) or session.phase != 'VERIFY_ID'):
         reply, events = handoff.decline_reply(session, pending)
+        line = empathy_line(session, 1)
+        reply = f'{line} {reply}' if line and not session.human_offered else reply
+        return reply, events, None
+    if session.phase == 'VERIFY_ID' and _failed_round_over_limit(session):
+        reply, events = handoff.verify_offer(session)
         return reply, events, None
     if session.phase == 'VERIFY_ID':
         reply = verify_reply(session, ex)

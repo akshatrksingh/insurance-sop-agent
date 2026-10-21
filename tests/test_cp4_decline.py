@@ -52,13 +52,14 @@ def test_post_02_null_consent_never_sends_and_keeps_the_choice_open(text, sent):
     assert not sent and r.email_preview is None and s.view().email_offer_open and 'email_sent' not in all_kinds(s)
 
 
-def test_post_02_decline_phrase_does_not_skip_while_human_offer_is_pending(sent):
-    """POST-02: with the human offer pending, a null-consent 'no thanks' is not a skip; nothing is skipped or sent and the human question stands."""
+def test_post_02_decline_phrase_at_human_offer_is_no_to_human_and_reasks_email(sent):
+    """POST-02: with the human offer pending, a plain 'no thanks' is a no to the human offer. Reply is the email re-ask; nothing skipped or sent."""
     s, llm = offered_then_strikes()
     llm.extractions['no thanks'] = {}
     r = say(s, llm, 'no thanks')[0]
-    assert not sent and r.email_preview is None and 'email_skipped' not in all_kinds(s)
-    assert s.view().phase == 'POST_PROCESS' and s.view().email_offer_open and 'human representative' in r.reply
+    assert r.reply == 'Understood. Should I send the summary to the email on file, or skip it?'
+    assert not sent and r.email_preview is None and 'email_skipped' not in all_kinds(s) and 'email_sent' not in all_kinds(s)
+    assert s.view().phase == 'POST_PROCESS' and s.view().email_offer_open and not s.gates.email_choice_made
 
 
 @pytest.mark.parametrize('text', ['no thanks', 'skip', 'nope'])

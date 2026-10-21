@@ -96,6 +96,9 @@ def test_emo_01_empathy_gate_for_every_label_and_intensity(prior, level, label):
     """EMO-01: the empathy line is prepended for frustration, anger or anxiety at intensity 2 or 3, never otherwise; the rest is a template."""
     s, r, idx, _ = run(prior, 'how long will this take', {'emotion': {'label': label, 'intensity': level}})
     CHECKED.append(r.reply)
+    if label == 'anger' and level == 3:  # CP5 EMO-03: anger at intensity 3 hands off, no template reply
+        assert s.view().phase == 'ESCALATED' and 'human representative' in r.reply
+        return
     line, rest = split_empathy(r.reply)
     assert (line is not None) is (label in NEGATIVE and level >= 2), (label, level, r.reply)
     assert line is None or line in EMPATHY

@@ -10,7 +10,7 @@ from insurance_claims.handoff import CLOSED, HANDOFF_AGAIN
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
 from insurance_claims.phases import update_state
 from insurance_claims.postprocess import decide
-from insurance_claims.scope import reconcile
+from insurance_claims.scope import emotional_only, reconcile
 from insurance_claims.state import Session
 from insurance_claims.views import EmailPreview, Event
 
@@ -85,8 +85,11 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
         _finish(session, draft, old_phase, reply, [])
         return TurnResult(reply=reply)
     extraction = reconcile(_read(llm, message, session), message)
+    complaint = emotional_only(extraction, message)
+    if complaint:  # a feeling about the service is never an off-topic strike
+        extraction = extraction.model_copy(update={'in_scope': True})
     events = update_state(draft, extraction)
-    reply, more, preview = build_reply(draft, extraction, message, old_phase, llm)
+    reply, more, preview = build_reply(draft, extraction, message, old_phase, llm, complaint)
     _finish(session, draft, old_phase, reply, more)
     return TurnResult(reply=reply, events=events + more, email_preview=preview)
 
@@ -109,6 +112,8 @@ def handle_choice(session: Session, choice: str) -> TurnResult:
     old_phase = draft.phase
     draft.turns.append(('Caller', CHOICES[choice]))
     reply, events, preview = decide(draft, choice)
+    draft.human_offered = False  # the click answers the email question, so no human offer stays open
+    draft.pending_question = None if draft.gates.email_choice_made else 'email'
     _finish(session, draft, old_phase, reply, events)
     return TurnResult(reply=reply, events=events, email_preview=preview)
 

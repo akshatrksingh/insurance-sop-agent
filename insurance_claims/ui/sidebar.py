@@ -51,6 +51,8 @@ def _details_section(view: SessionView) -> None:
         st.markdown('<div class="cs-side-title">Extractor fields, last turn</div>', unsafe_allow_html=True)
         names = ', '.join(view.extracted_fields) or 'none'
         st.markdown(f'<div class="cs-note">{html.escape(names)}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cs-side-title">Emotion, last turn</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cs-note">{html.escape(view.emotion)}</div>', unsafe_allow_html=True)
 
 
 def render_sidebar(view: SessionView) -> None:

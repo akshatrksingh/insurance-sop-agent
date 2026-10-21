@@ -6,7 +6,7 @@ import re
 import pytest
 
 from cp1helpers import AVA, LABELS, MARGARET, YAWEN, Rec, failure_names_factor, ident, leaks, matched
-from templatecheck import WORDS, check_reply
+from templatecheck import VERIFY_OFFER, WORDS, check_reply
 from insurance_claims.orchestrator import handle_turn, new_session
 
 FACTORS = list(LABELS)
@@ -86,6 +86,10 @@ def check(turns):
         if not verified:
             assert len(rows) == max(len(sets['h']), len(sets['o'])), (t, rows, sets)
             assert check_reply(reply, rows) == [], reply
+            if reply == VERIFY_OFFER:  # VER-07: third failed round gets the fixed human offer instead of the partial template
+                assert len(replies) >= 2 and not rows, (t, replies)
+                replies.append(reply)
+                continue
             assert items and check_reply(reply, rows, groups_=['partial']) == [], reply
             assert f'{len(rows)} of 3 confirmed' in reply, reply
             assert re.findall(r'(\d+) of (\d+)', reply) == [(str(len(rows)), '3')], reply

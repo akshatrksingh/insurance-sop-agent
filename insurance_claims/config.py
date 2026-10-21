@@ -68,3 +68,9 @@ def load_settings(sidebar_token: str = '') -> Settings:
 def off_topic_limit() -> int:
     """Return MAX_OFF_TOPIC (default 3), resolved once per process."""
     return load_settings().max_off_topic
+
+
+@lru_cache(maxsize=1)
+def verify_fail_limit() -> int:
+    """Return MAX_VERIFY_FAILS (default 3), resolved once per process."""
+    return load_settings().max_verify_fails

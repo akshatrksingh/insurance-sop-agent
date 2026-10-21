@@ -24,3 +24,7 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - CP4, B7: "no thanks" mid-case (no offer open) moves the session to POST_PROCESS and opens the email offer. Tester fact.
 - CP4, B8: a cold `wants_human` before any human offer gets the greeting template. Belongs to CP5 (handoff rules).
 - CP4, B9: tests/test_cp4_carryover.py imports BUNDLE from another test module (same hygiene as the CP2 T3-10 item). Reviewer T3-7.
+- CP5, B10: the `human_answer == 'no'` and decline branches in flow.py skip `safe_reply` in VERIFY_ID (fixed templates, no leak found). Reviewer Tier 2.
+- CP5, B11: after a no to the human offer, `off_topic_strikes` stays at the limit, so the next out-of-scope turn re-offers a human at once. Reviewer Tier 2.
+- CP5, B12: `scope.py` is at 182 lines, close to the 200 limit; split before CP3 or GR-lite adds to it.
+- CP5, B13: the emotion-only rule relies on a request-word list; an emotional message with an off-topic request that has no question word earns no strike. Accepted, low risk.

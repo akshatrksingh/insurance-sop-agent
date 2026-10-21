@@ -16,6 +16,8 @@ NEGATIVE = ('frustration', 'anger', 'anxiety')
 # only as this exact string and only once the off-topic strike count has reached the default limit.
 HUMAN_OFFER = 'I cannot help with that here. Would you like me to connect you with a human representative?'
 OFFER_AFTER_STRIKES = 3
+# Fixed VER-07 offer after the third failed verification round (CP5). Accepted only as this exact string.
+VERIFY_OFFER = 'I could not confirm your identity with those details. Would you like me to connect you with a human representative?'
 
 
 def options_text(unconfirmed):
@@ -68,6 +70,8 @@ def check_reply(reply, confirmed, label='neutral', intensity=0, groups_=None, st
     """Return a list of problems (empty when the reply is an allowed template with correct slots).
     HUMAN_OFFER is accepted only when strikes is given and at least OFFER_AFTER_STRIKES."""
     if reply == HUMAN_OFFER and strikes is not None and strikes >= OFFER_AFTER_STRIKES:
+        return []
+    if reply == VERIFY_OFFER:
         return []
     line, rest = split_empathy(reply)
     problems = []

@@ -101,6 +101,7 @@ class SessionView(BaseModel):
     turns: list[tuple[str, str]]
     events: list[Event]
     extracted_fields: list[str] = []
+    emotion: str = 'neutral, 0'
     email_offer_open: bool = False
     email_preview: EmailPreview | None = None
 
@@ -162,6 +163,7 @@ def build_view(session: 'Session') -> SessionView:
         turns=list(session.turns),
         events=list(session.events),
         extracted_fields=list(session.extracted_fields),
+        emotion=f'{session.emotion.label}, {session.emotion.intensity}',
         email_offer_open=_offer_open(session),
         email_preview=session.email_preview,
     )

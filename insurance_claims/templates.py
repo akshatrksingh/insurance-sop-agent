@@ -98,3 +98,12 @@ def verify_reply(session: Session, extraction: Extraction) -> str:
         text = f'{empathy[session.turn_count % len(empathy)]} {text}'
     logger.info('Pre-verification reply: situation=%s (session=%s)', situation, session.session_id)
     return text
+
+
+def empathy_line(session: Session, minimum: int = EMPATHY_MIN_INTENSITY) -> str | None:
+    """Return a fixed empathy line when the latest emotion is negative at the minimum intensity, else None."""
+    emotion = session.emotion
+    if emotion.label not in NEGATIVE_LABELS or emotion.intensity < minimum:
+        return None
+    lines = _load()['empathy']
+    return lines[session.turn_count % len(lines)]

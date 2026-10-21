@@ -36,6 +36,17 @@ def mark_answered(session: Session) -> None:
         session.gates.case_answered = True
 
 
+def _resists(session: Session, extraction: Extraction) -> bool:
+    """True when this turn pushes back on a gate: a refusal, or negative emotion before verification
+    with no identity given. Counted by code from the extraction (EMO-03)."""
+    emotion = extraction.emotion  # runs after apply_identity: a turn that verifies is never resistance
+    if extraction.refused_verification or emotion.label == 'refusal':
+        return not session.gates.verified
+    gave_identity = any(extraction.identity.model_dump().values())
+    upset = emotion.label in ('frustration', 'anger', 'anxiety') and emotion.intensity >= 2
+    return upset and not session.gates.verified and not gave_identity
+
+
 def update_state(session: Session, extraction: Extraction) -> list[Event]:
     """Store hints and emotion, then run verification. Code decides every gate.
 
@@ -70,6 +81,9 @@ def update_state(session: Session, extraction: Extraction) -> list[Event]:
         text = f'Emotion: {extraction.emotion.label}, {extraction.emotion.intensity}'
         events.append(Event(kind='emotion', text=text, level='detail'))
     events += apply_identity(session, extraction.identity)
+    if _resists(session, extraction):
+        session.resistance_count += 1
+        events.append(Event(kind='resistance', text=f'Resistance round {session.resistance_count}', level='detail'))
     session.extracted_fields = field_names(extraction)
     events += advance(session)
     for event in events:
