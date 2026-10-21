@@ -28,3 +28,5 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - CP5, B11: after a no to the human offer, `off_topic_strikes` stays at the limit, so the next out-of-scope turn re-offers a human at once. Reviewer Tier 2.
 - CP5, B12: `scope.py` is at 182 lines, close to the 200 limit; split before CP3 or GR-lite adds to it.
 - CP5, B13: the emotion-only rule relies on a request-word list; an emotional message with an off-topic request that has no question word earns no strike. Accepted, low risk.
+- CP5, B14: before CP3 starts, split `scope.py` (182 of 200 lines) by concern, no behavior change. Carried to the next session as the first task.
+- CP4, B15: show the email skip path live ("no thanks") in the final tester pass; offline only so far.
