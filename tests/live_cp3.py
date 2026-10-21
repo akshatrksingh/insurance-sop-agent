@@ -43,10 +43,12 @@ def main():
             ls.emit(f'Agent: {r.reply}', lines)
             kinds = [e.kind for e in r.events]
             phase = s.view().phase
+            n_calls = ls.STATE['calls'] - before
             handoff = 'handoff' in kinds or phase == 'ESCALATED'
             ls.emit(f'  [event kinds={kinds} phase={phase} handoff={handoff} '
-                    f'llm_calls={ls.STATE["calls"] - before} s={time.time() - t0:.1f}]', lines)
-    ls.emit(f'SUMMARY llm_calls={ls.STATE["calls"]}', lines)
+                    f'llm_calls={n_calls} s={time.time() - t0:.1f}]', lines)
+    total = ls.STATE['calls']
+    ls.emit(f'SUMMARY llm_calls={total}', lines)
     OUT.write_text('\n'.join(lines) + '\n')
 
 

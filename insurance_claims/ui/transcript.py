@@ -12,6 +12,7 @@ EVENT_CLASS = {
     'handoff': 'handoff',
     'handoff_offer': 'handoff',
     'email_failed': 'handoff',
+    'flagged': 'handoff',
 }
 
 

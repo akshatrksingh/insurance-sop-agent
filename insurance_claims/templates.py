@@ -8,7 +8,7 @@ import json
 import logging
 from functools import lru_cache
 
-from insurance_claims import scope
+from insurance_claims import gr_text, scope
 from insurance_claims.extractor import Extraction
 from insurance_claims.llm import PROMPT_DIR
 from insurance_claims.state import Session
@@ -43,7 +43,7 @@ def pick_situation(session: Session, extraction: Extraction) -> str:
     Returns:
         A key of the template file, or `clarify` (the factor is chosen later).
     """
-    first_turn = session.turn_count == 0  # error notices do not count as a turn
+    first_turn = session.turn_count == 0 and not gr_text.replied(session)  # error notices do not count as a turn
     upset = _negative(extraction)
     last = session.turns[-1][1] if session.turns else ''
     closing = scope.kind(last) == 'closing'

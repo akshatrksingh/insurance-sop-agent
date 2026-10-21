@@ -19,6 +19,14 @@ OFFER_AFTER_STRIKES = 3
 # Fixed VER-07 offer after the third failed verification round (CP5). Accepted only as this exact string.
 VERIFY_OFFER = 'I could not confirm your identity with those details. Would you like me to connect you with a human representative?'
 
+# Fixed GR-lite replies (SAFE-07, SAFE-08): code text, accepted only as these exact strings.
+GR_REFUSAL = ('I cannot help with that request. This message and its time were recorded for review. '
+              'You can rephrase your question, or ask for a human representative.')
+GR_SELF_HARM = ('I am sorry you are going through this. You deserve support right now. If you are in immediate danger, '
+                'call your local emergency number. In the US you can call or text 988. '
+                'Would you like me to connect you with a human representative?')
+GR_FIXED = (GR_REFUSAL, GR_SELF_HARM)
+
 
 def options_text(unconfirmed):
     """Option words for the unconfirmed factors in file order. Two options are accepted with or without a comma."""
@@ -71,7 +79,7 @@ def check_reply(reply, confirmed, label='neutral', intensity=0, groups_=None, st
     HUMAN_OFFER is accepted only when strikes is given and at least OFFER_AFTER_STRIKES."""
     if reply == HUMAN_OFFER and strikes is not None and strikes >= OFFER_AFTER_STRIKES:
         return []
-    if reply == VERIFY_OFFER:
+    if reply == VERIFY_OFFER or reply in GR_FIXED:
         return []
     line, rest = split_empathy(reply)
     problems = []

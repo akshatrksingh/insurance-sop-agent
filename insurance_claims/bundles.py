@@ -2,6 +2,7 @@
 
 from datetime import date
 
+from insurance_claims import gr_text
 from insurance_claims.cases import hints_of, matching_ids
 from insurance_claims.data import full_name
 from insurance_claims.state import Session
@@ -12,7 +13,7 @@ EMOTION_MIN_INTENSITY = 2
 
 def _add_common(session: Session, bundle: dict) -> None:
     """Add the greeting flag, and the emotion only when the extractor reports intensity 2 or more."""
-    bundle['first_agent_turn'] = session.turn_count == 0  # error notices do not count as a turn
+    bundle['first_agent_turn'] = session.turn_count == 0 and not gr_text.replied(session)  # error notices do not count as a turn
     if session.emotion.intensity >= EMOTION_MIN_INTENSITY:
         bundle['emotion'] = session.emotion.model_dump()
 

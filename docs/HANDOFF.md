@@ -3,12 +3,12 @@
 Main thread = coordinator. It never implements and never runs git. Subagents (`.claude/agents/`): coder, tester, reviewer. Read order: `docs/CLAUDE.md`, this file, `docs/BACKLOG.md`, `ASSIGNMENT.md`, `SYSTEM_DESIGN.md`, `CODING_GUIDELINES.md`, `FRONTEND_GUIDELINES.md`, `DEV_STAGES.md`. The human owns approvals, git and the final Try script.
 
 ## State
-- Approved, committed, tagged and pushed (repo https://github.com/akshatrksingh/insurance-sop-agent): CP0 `cp-0`, CP1 `cp-1`, CP2 `cp-2`, CP3 built and approved by main thread pending your push (tag `cp-3`; scope.py split into allowlist.py and injection.py, guidance.py added), CP4 `cp-4` (scope guard, email offer, consent, summary, mock send, SAFE-05), CP5 `cp-5` (emotion, resistance, handoff, VER-07, S2, S4, S8).
-- Remaining order: GR-lite, CP6. Then the heavy final passes, the final Try script and the deploy steps.
+- Approved, committed, tagged and pushed (repo https://github.com/akshatrksingh/insurance-sop-agent): CP0 `cp-0`, CP1 `cp-1`, CP2 `cp-2`, CP3 `cp-3` ( scope.py split into allowlist.py and injection.py, guidance.py added), GR-lite built (gr_lite.py, gr_patterns.py, gr_log.py, gr_text.py), pending your push (tag `gr-lite`), CP4 `cp-4` (scope guard, email offer, consent, summary, mock send, SAFE-05), CP5 `cp-5` (emotion, resistance, handoff, VER-07, S2, S4, S8).
+- Remaining order: CP6. Then the heavy final passes, the final Try script and the deploy steps.
   - CP3: match follow-ups to `required_document_guideline.json`, recommend a human representative when items or substitutes cannot be obtained, keep the other-party refusal (INT-03, CASE-02, CASE-03, S9).
   - GR-lite (code only, no extra model calls): system-probe and harmful pattern list with fixed refusal, no state change, fixed notice; one redacted stdout log line per flagged message; supportive fixed self-harm reply with human offer; "show me all my claims" must not count as injection; injection text with an off-topic request still earns the strike; "Message flagged" inline event; SAFE-07..09; about 30 labeled phrases with 15 benign controls, zero false positives.
   - CP6: update README, hosted deploy steps, final Try script, turn cap (NFR-08), key events inline in order, consecutive failed turns show every caller message, Try menu switchable off for the deployed demo. Cut: glass CSS (Tier 2 waiver), throttle, full NFR measurement (report calls per turn and suite time only).
-- Last offline suite (main thread, one command): 1733 passed, 1 skipped, about 23 s (after CP3).
+- Last offline suite (main thread, one command): 1947 passed, 1 skipped, about 24 s (after GR-lite).
 
 ## Carry-overs
 - `scope.py` split done (68 lines; `injection.py` has room for GR-lite).

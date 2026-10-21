@@ -5,6 +5,7 @@ import logging
 from pydantic import BaseModel
 
 from insurance_claims.extractor import Extraction
+from insurance_claims import gr_lite
 from insurance_claims.flow import build_reply
 from insurance_claims.handoff import CLOSED, HANDOFF_AGAIN
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
@@ -42,13 +43,15 @@ def _commit(session: Session, draft: Session, old_phase: str) -> None:
     logger.info('Turn %d done (session=%s)', session.turn_count, session.session_id)
 
 
-def _finish(session: Session, draft: Session, old_phase: str, reply: str, events: list[Event]) -> None:
-    """Stamp events at the reply position, append the reply, count the turn, and commit."""
+def _finish(
+    session: Session, draft: Session, old_phase: str, reply: str, events: list[Event], count: bool = True
+) -> None:
+    """Stamp events at the reply position, append the reply, count the turn unless `count` is False, and commit."""
     for event in events:
         event.at = len(draft.turns)
     draft.events += events
     draft.turns.append(('Agent', reply))
-    draft.turn_count += 1
+    draft.turn_count += 1 if count else 0
     _commit(session, draft, old_phase)
 
 
@@ -80,6 +83,11 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
     draft = session.model_copy(deep=True)
     old_phase = draft.phase
     draft.turns.append(('Caller', message))
+    category = gr_lite.classify(message)  # SAFE-07: decided before any model call
+    flagged = gr_lite.respond(draft, category, message) if category else None
+    if flagged:  # fixed reply, no state change beyond the transcript, no turn counted
+        _finish(session, draft, old_phase, flagged[0], flagged[1], count=False)
+        return TurnResult(reply=flagged[0], events=flagged[1])
     if old_phase in ('ESCALATED', 'COMPLETE'):
         reply = CLOSED if old_phase == 'COMPLETE' else HANDOFF_AGAIN
         _finish(session, draft, old_phase, reply, [])

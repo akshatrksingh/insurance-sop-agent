@@ -2,7 +2,7 @@
 import re
 
 import replyrecorder
-from templatecheck import check_reply
+from templatecheck import GR_FIXED, check_reply
 from insurance_claims.llm import FakeLLM
 from insurance_claims.orchestrator import handle_turn, new_session
 
@@ -31,7 +31,7 @@ def hits_for(rec):
     for n, m in re.findall(r'(\d+) of (\d+)', r):
         if m != '3' or int(n) != min(rec['confirmed'], 3):
             hits.append(f'wrong count {n} of {m}')
-    if rec['intensity'] < 2 and EMOTION.search(r):
+    if rec['intensity'] < 2 and EMOTION.search(r) and r not in GR_FIXED:  # the fixed self-harm text says 'danger'
         hits.append('emotion word below intensity 2')
     return hits
 

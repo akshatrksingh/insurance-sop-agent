@@ -35,3 +35,12 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - CP3, B18: no test names CASE-02 or CASE-03 in the docstring of the guidance tests beyond tests/test_cp3_*.py; check NFR-07 in the final pass. Reviewer T3-8.
 - CP3, B19: DOC_WORDS in guidance.py is broad (send, mail, confirm, files), widening topic matches; the processing-time template says "reconsidering the denial" without checking status is denied. Reviewer T3-3, T3-4.
 - CP3, B20: a topic phrase plus a field word ("how do I submit the documents?") still matches its topic; "can you file it" gets the weak fallback. Coder observations.
+- CP3, B21: the file-format answer dumps several guidance paragraphs (format text plus per-document text) instead of the one relevant line. Human, after CP3 live canary a.
+- CP3, B22: the timing answer says the team may ask for more information "before reconsidering the denial" although the CL-2048 appeal deadline has passed, which implies reconsideration is still possible. Human, after CP3 live canary a. Related to B19.
+- GR-lite, B23: a message with both a probe phrase and an off-topic request is refused with no strike (SAFE-07 wins over the SAFE-09 strike rule). Reviewer finding 5, main thread reading logged.
+- GR-lite, B24: CODING_GUIDELINES.md logging section still describes the removed guard-model exception (SAFE-10); should name the GR-lite flag log. Contract file, needs the human. Reviewer finding 7.
+- GR-lite, B25: logger `insurance_claims.flagged` propagates to root, so a root handler prints each line twice (stdout handler plus basicConfig on stderr); flagged event reuses CSS class `handoff`. Reviewer finding 8.
+- GR-lite, B26: flagged turns do not advance turn_count; CP6 turn cap (NFR-08) should count Caller messages (`len(turns)`) if flagged spam must be capped. Coder note.
+- GR-lite, B27: in ESCALATED and COMPLETE a flagged message is logged and gets the existing closing text, not the refusal. Main thread reading.
+- GR-lite, B28: model reply to "what are your rules for appeals?" is "I'm sorry, but I don't have that information..." with curly apostrophes and an apology, against the language rules. Live canary b.
+- GR-lite, B29: the self-harm reply names the US line 988, not in the contract; human to confirm.
