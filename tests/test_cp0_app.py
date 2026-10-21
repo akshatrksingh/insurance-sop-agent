@@ -2,7 +2,7 @@
 import re
 
 
-from apphelpers import DASHES, EMOJI, all_text, fake_class, make_app, state_of
+from apphelpers import DASHES, EMOJI, REPLY_MARK, all_text, fake_class, make_app, state_of
 from conftest import SENTINEL
 
 def test_app_runs_without_exception(no_key):
@@ -84,7 +84,7 @@ def test_del_01_env_var_key_is_used(monkeypatch, fake_backend):
     at = make_app().run()
     at.chat_input[0].set_value('hello').run()
     assert not at.exception and not at.error
-    assert 'This is a scripted reply.' in all_text(at)
+    assert REPLY_MARK in all_text(at)
 
 
 def test_del_01_secrets_key_is_used(no_key, monkeypatch):
@@ -96,7 +96,7 @@ def test_del_01_secrets_key_is_used(no_key, monkeypatch):
     at.run()
     at.chat_input[0].set_value('hello').run()
     assert not at.exception and not at.error
-    assert 'This is a scripted reply.' in all_text(at)
+    assert REPLY_MARK in all_text(at)
 
 
 def test_del_01_sidebar_token_is_used(no_key, monkeypatch):
@@ -107,7 +107,7 @@ def test_del_01_sidebar_token_is_used(no_key, monkeypatch):
     at.sidebar.text_input[0].set_value(SENTINEL).run()
     at.chat_input[0].set_value('hello').run()
     assert not at.error
-    assert 'This is a scripted reply.' in all_text(at)
+    assert REPLY_MARK in all_text(at)
 
 
 def test_del_01_key_precedence_secrets_then_env_then_sidebar(monkeypatch, record_property):
@@ -130,6 +130,7 @@ def test_del_01_key_precedence_secrets_then_env_then_sidebar(monkeypatch, record
     record_property('token_seen_by_client', [t for t in ('SECRETTOKEN', 'ENVTOKEN', 'SIDEBARTOKEN') if t in flat])
     assert seen, 'client factory not called'
     assert 'SECRETTOKEN' in flat
+    assert 'ENVTOKEN' not in flat and 'SIDEBARTOKEN' not in flat
 
 
 def test_ui_06_reset_button_exists_in_header(no_key):
@@ -141,12 +142,12 @@ def test_ui_06_reset_clears_session(fake_backend):
     """UI-06: Reset clears transcript, memory and phase; a new session id follows."""
     at = make_app().run()
     at.chat_input[0].set_value('hello').run()
-    assert 'This is a scripted reply.' in all_text(at)
+    assert REPLY_MARK in all_text(at)
     before = state_of(at)
     next(b for b in at.button if b.label == 'Reset').click().run()
     t = all_text(at)
     assert not at.exception
-    assert 'This is a scripted reply.' not in t
+    assert REPLY_MARK not in t
     assert 'hello' not in t.replace('Claims support', '')
     assert 'Type a message to start the conversation.' in t
     assert 'Verify ID' in t
@@ -161,7 +162,7 @@ def test_ui_06_reset_then_chat_works(fake_backend):
     next(b for b in at.button if b.label == 'Reset').click().run()
     at.chat_input[0].set_value('hi again').run()
     assert not at.exception and not at.error
-    assert 'This is a scripted reply.' in all_text(at)
+    assert REPLY_MARK in all_text(at)
 
 
 def test_transcript_shows_speaker_labels_and_text(fake_backend):

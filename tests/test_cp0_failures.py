@@ -2,6 +2,7 @@
 
 import pytest
 
+from apphelpers import REPLY_MARK
 from failhelpers import app, visible, boom_backend, EXC_FACTORIES, T
 
 @pytest.mark.parametrize('where', ['reply', 'extract', 'both', 'init'])
@@ -65,7 +66,7 @@ def test_failed_turn_no_agent_reply_invented(monkeypatch):
     at = app().run()
     at.chat_input[0].set_value('hello').run()
     t = visible(at)
-    assert 'This is a scripted reply.' not in t
+    assert REPLY_MARK not in t
     sess = at.session_state['session']
     assert not any(role == 'Agent' for role, _ in sess.view().turns)
 
@@ -97,7 +98,7 @@ def test_failed_turn_then_recovery_after_backend_fixed(monkeypatch):
     state['fail'] = False
     at.chat_input[0].set_value('second').run()
     assert not at.exception and not at.error
-    assert 'This is a scripted reply.' in visible(at)
+    assert REPLY_MARK in visible(at)
 
 
 def test_failed_turn_reset_clears_error(monkeypatch):
@@ -135,9 +136,12 @@ def test_handle_turn_direct_exception_contract(monkeypatch, record_property):
     s = new_session()
     try:
         r = handle_turn(s, 'hello', Boom())
-        outcome = f'returned reply={r.reply!r}'
-        assert T not in r.reply and T not in s.view().model_dump_json()
-    except Exception as e:
-        outcome = f'raised {type(e).__name__}'
-    record_property('handle_turn_with_failing_client', outcome)
+    except RuntimeError:
+        r = None
+    record_property('handle_turn_raised', r is None)
+    assert T not in s.view().model_dump_json()
+    if r is None:
+        assert not any(role == 'Agent' for role, _ in s.view().turns)
+    else:
+        assert T not in r.reply
 

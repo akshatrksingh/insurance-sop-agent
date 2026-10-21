@@ -14,11 +14,13 @@ EXPECTED = {
 
 
 def rgb(h):
+    """Convert #RRGGBB to an (r, g, b) tuple."""
     h = h.lstrip('#')
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
 def lum(c):
+    """Relative luminance of an rgb tuple."""
     def f(v):
         v /= 255
         return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
@@ -27,11 +29,13 @@ def lum(c):
 
 
 def ratio(a, b):
+    """WCAG contrast ratio between two rgb tuples."""
     la, lb = sorted((lum(a), lum(b)), reverse=True)
     return (la + 0.05) / (lb + 0.05)
 
 
 def effective_glass():
+    """Glass colour composited over the backdrop at GLASS_ALPHA."""
     g, b = rgb(TOKENS['glass']), rgb(TOKENS['backdrop'])
     return tuple(round(GLASS_ALPHA * gc + (1 - GLASS_ALPHA) * bc) for gc, bc in zip(g, b))
 

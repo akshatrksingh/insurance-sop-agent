@@ -12,24 +12,26 @@ ALLOWED = {'streamlit', 'pydantic', 'openai', 'pytest'}
 
 
 def _repo_files():
+    """Repo text files outside tests, fixtures and virtual environments."""
     return list(text_files())
 
 
 def test_lang_01_no_em_or_en_dash_in_repo_text():
-    """LANG-01: no em/en dash in app code, prompts, README, docs, config."""
+    """LANG-01: no em/en dash in app code, prompts, README, docs, config, tests."""
     hits = []
-    for p in _repo_files():
+    for p in _repo_files() + sorted((ROOT / 'tests').glob('*.py')):
         for n, line in enumerate(p.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
             if any(d in line for d in DASHES):
                 hits.append(f'{p.relative_to(ROOT)}:{n}')
     assert not hits, hits
 
 
-def test_lang_01_no_dash_in_fixtures_is_reported_only():
-    """LANG-01: fixtures are read-only; count dashes there for information."""
+def test_lang_01_no_dash_in_fixtures_is_reported_only(record_property):
+    """LANG-01: fixtures are read-only; the dash count is recorded, and the six fixture files are present."""
     fx = ROOT / 'insurance_claims' / 'fixtures'
     n = sum(f.read_text(encoding='utf-8').count(d) for f in fx.glob('*.json') for d in DASHES)
-    assert n >= 0
+    record_property('dashes_in_fixtures', n)
+    assert len(list(fx.glob('*.json'))) == 6
 
 
 @pytest.mark.parametrize('text', ['hello', 'hi there', 'what can you do', 'thanks'])
@@ -79,6 +81,7 @@ def test_nfr_05_file_length_under_200_lines(record_property):
 
 
 def _imports(path):
+    """Yield the top-level module name of every import in a file."""
     tree = ast.parse(path.read_text(encoding='utf-8'))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

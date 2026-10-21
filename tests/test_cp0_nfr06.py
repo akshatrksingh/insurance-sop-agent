@@ -7,6 +7,7 @@ from conftest import ROOT
 
 
 def run_live_test(env_extra):
+    """Run the live test in a subprocess pytest with the given extra environment."""
     env = {k: v for k, v in os.environ.items() if k not in ('LLM_API_KEY', 'RUN_LIVE')}
     env.update(env_extra)
     return subprocess.run(
@@ -29,6 +30,6 @@ def test_nfr_06_run_live_without_key_also_skips():
     assert r.returncode == 0 and '1 skipped' in r.stdout
 
 
-def test_nfr_06_isolation_clears_key_for_non_live_tests(monkeypatch):
+def test_nfr_06_isolation_clears_key_for_non_live_tests():
     """NFR-06: a key in the parent environment is cleared for ordinary tests by the autouse fixture."""
     assert not os.environ.get('LLM_API_KEY')

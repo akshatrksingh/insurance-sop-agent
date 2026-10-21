@@ -4,7 +4,8 @@ import html
 
 import streamlit as st
 
-from insurance_claims.state import SessionView
+from insurance_claims.ui.trymenu import render_try_menu
+from insurance_claims.views import SessionView
 
 ICONS = {'done': '&#10003;', 'current': '&#9679;', 'pending': '&#9675;'}
 STATUS_TEXT = {'done': 'done', 'current': 'current', 'pending': 'pending'}
@@ -17,11 +18,11 @@ def _memory_section(view: SessionView) -> None:
         '<div class="cs-note">Remembered from this chat. Cleared on reset.</div>',
         unsafe_allow_html=True,
     )
-    if not view.memory_rows:
-        st.markdown('<div class="cs-note">Nothing remembered yet. Send a message to start.</div>', unsafe_allow_html=True)
     for row in view.memory_rows:
+        icon = {'good': ICONS['done'] + ' ', 'warn': ICONS['pending'] + ' '}.get(row.tone, '')
         st.markdown(
-            f'<div class="cs-side-row"><span>{html.escape(row.label)}</span><span>{html.escape(row.value)}</span></div>',
+            f'<div class="cs-side-row"><span>{html.escape(row.label)}</span>'
+            f'<span class="cs-tone-{row.tone}">{icon}{html.escape(row.value)}</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -48,6 +49,7 @@ def render_sidebar(view: SessionView) -> None:
     with st.sidebar:
         _memory_section(view)
         _progress_section(view)
+        render_try_menu()
         st.markdown('<div class="cs-side-title">Settings</div>', unsafe_allow_html=True)
         st.text_input(
             'API token (optional)',

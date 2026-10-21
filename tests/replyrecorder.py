@@ -1,0 +1,58 @@
+"""Records every reply produced by handle_turn anywhere in the suite, with the context needed to scan it."""
+import insurance_claims.orchestrator as orchestrator
+
+RECORDS = []
+_original = orchestrator.handle_turn
+
+
+def _emotion(extraction):
+    """(label, intensity) from an Extraction object or dict, ('neutral', 0) if unreadable."""
+    try:
+        emotion = extraction['emotion'] if isinstance(extraction, dict) else extraction.emotion
+        get = (lambda k: emotion[k]) if isinstance(emotion, dict) else (lambda k: getattr(emotion, k))
+        return str(get('label')), int(get('intensity'))
+    except Exception:
+        return 'neutral', 0
+
+
+def _intensity(extraction):
+    """Emotion intensity from an Extraction object or dict, 0 if unreadable."""
+    return _emotion(extraction)[1]
+
+
+def recording_handle_turn(session, text, llm):
+    """Call the real handle_turn and record the reply with its context."""
+    box = {'intensity': 0, 'label': 'neutral'}
+    original_extract = getattr(llm, 'extract', None)
+
+    def extract(*a, **k):
+        """Call the real extract and note the emotion intensity."""
+        out = original_extract(*a, **k)
+        box['label'], box['intensity'] = _emotion(out)
+        return out
+
+    try:
+        prior = sum(1 for role, _ in session.view().turns if role == 'Agent')
+        turns_before, was_verified = sum(1 for r, _ in session.view().turns if r == 'Caller'), session.view().phase != 'VERIFY_ID'
+        llm.extract = extract
+    except Exception:
+        prior, turns_before, was_verified = 0, 0, False
+    try:
+        result = _original(session, text, llm)
+    finally:
+        try:
+            del llm.extract
+        except Exception:
+            pass
+    rows = session.view().model_dump()['memory_rows']
+    RECORDS.append({'reply': result.reply, 'prior_agent': prior, 'intensity': box['intensity'],
+                    'confirmed': sum(1 for r in rows if r['value'] == 'matched'),
+                    'matched_labels': [r['label'] for r in rows if r['value'] == 'matched'],
+                    'verified': session.view().phase != 'VERIFY_ID', 'was_verified': was_verified,
+                    'label': box['label'], 'rejected': sum(1 for r, _ in session.view().turns if r == 'Caller') == turns_before})
+    return result
+
+
+def install():
+    """Replace orchestrator.handle_turn with the recording wrapper (idempotent)."""
+    orchestrator.handle_turn = recording_handle_turn

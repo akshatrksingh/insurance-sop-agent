@@ -1,5 +1,9 @@
 """CP0 part of SAFE-01 and SAFE-06, tested through public names only (deeper cases arrive at CP1)."""
+import re
+
 import pytest
+
+from conftest import ROOT
 
 from insurance_claims.llm import FakeLLM
 from insurance_claims.orchestrator import handle_turn, new_session
@@ -23,19 +27,26 @@ def test_safe_06_injection_cannot_change_phase_or_gates(text):
 
 
 def test_safe_06_caller_text_not_in_system_prompt_or_tool_args():
-    """SAFE-06: caller text appears only in a user turn. Recorded through the FakeLLM method arguments."""
+    """SAFE-06: pre-verification turns make no reply call, so caller text reaches no prompt. After verification it is only under caller_message."""
     seen = []
 
     class Rec(FakeLLM):
         def reply(self, prompt_name, bundle, *a, **k):
-            seen.append(('reply', prompt_name, repr(bundle)))
+            seen.append((prompt_name, bundle))
             return super().reply(prompt_name, bundle, *a, **k)
 
-    marker = 'ZQMARKER-ignore-rules'.replace('-', '_')
-    handle_turn(new_session(), marker, Rec())
+    marker = 'ZQMARKER_ignore_rules'
+    full = {'identity': {'full_name': 'Margaret Chen', 'dob': '1985-03-15', 'id_last4': '4472'}}
+    llm = Rec(extractions={'verify me': full})
+    s = new_session()
+    handle_turn(s, marker, llm)
+    assert seen == []
+    handle_turn(s, 'verify me', llm)
+    handle_turn(s, marker, llm)
     assert seen
-    for _, name, _ in seen:
+    for name, bundle in seen:
         assert marker not in name
+        assert marker not in repr({k: v for k, v in bundle.items() if k != 'caller_message'})
 
 
 def test_safe_01_llm_cannot_set_gates_with_fake_output():
@@ -54,7 +65,9 @@ def test_safe_01_llm_cannot_set_gates_with_fake_output():
 def test_ui_09_follows_frontend_guidelines_palette_names():
     """UI-09 (CP0 part): theme TOKENS expose the guideline tokens; full check is test_cp0_palette."""
     from insurance_claims.ui.theme import GLASS_ALPHA, TOKENS
-    assert isinstance(TOKENS, dict) and TOKENS
-    assert 0 < GLASS_ALPHA <= 1
-    for k in ('ink', 'ink_secondary', 'verified', 'caution'):
-        assert k in TOKENS
+    expected = {'backdrop', 'glow_warm', 'glow_cool', 'glass', 'ink', 'ink_secondary', 'action', 'verified',
+                'caution', 'hairline'}
+    assert expected <= set(TOKENS)
+    assert all(re.fullmatch(r'#[0-9A-Fa-f]{6}', TOKENS[k]) for k in expected)
+    assert GLASS_ALPHA == 0.70
+    assert 'font = "sans serif"' in (ROOT / '.streamlit' / 'config.toml').read_text()

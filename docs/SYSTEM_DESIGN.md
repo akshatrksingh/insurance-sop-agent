@@ -60,8 +60,10 @@ tests/
 | `extractor` | extraction call, schema, validation |
 | `phases` | per-phase gate logic and context bundle builder |
 | `tools` | claim lookup, guidance match, email summary, mock send |
-| `scope` | strike counter, human-offer rule |
-| `responder` | reply call and output filters (dashes, pre-verification scan) |
+| `scope` | code allowlist for the off-topic rule, strike counter, human-offer rule |
+| `templates` | pre-verification replies built from `prompts/verify_templates.json` (no model text) |
+| `views` | view models (`Event`, `SessionView`) and phase and factor constants, re-exported by `state` |
+| `responder` | post-verification reply composition and output checks (dashes, banned words, repeat greeting or announcement, emotion words) |
 | `orchestrator` | `new_session`, `handle_turn` |
 | `ui` and `app.py` | rendering from `Session.view()` only, no business logic |
 
@@ -281,5 +283,16 @@ If this file is silent or contradictory: stop, ask the human, log the answer bel
 | 2026-10-20 | Palette: the three new values (`ink_secondary` #68686D, `verified` #1B7437, `caution` #A64B00) replace the old ones to meet the 4.5:1 contrast rule, which is Tier 1. Human decision. |
 | 2026-10-20 | NFR-06 note (CP0, not a waiver): the offline guard patches `socket.connect` only in the test process, so the `streamlit run` subprocess test (loopback only, no message sent) is not covered by it. Live tests run only when both `LLM_API_KEY` and `RUN_LIVE=1` are set. |
 | 2026-10-20 | CP0 Try script, missing key and bad token step: skipped by the human, who accepts the gap. The tester covers that path automatically (SAFE-04 and the missing-key notice at page load). |
+| 2026-10-20 | UI-03 covers the Session memory section. The Try menu is demo scaffolding that uses the synthetic starter identities, labeled "Demo identities" in the UI, and may show their values. A CP6 item makes the Try menu switchable off for a deployed demo. Human decision. |
+| 2026-10-20 | Off-topic rule (human decision). Only clearly off-topic text counts: a substantial request unrelated to insurance claims support. Ambiguous is in scope. Always in scope, never a strike, never sent to a guard model: greetings and goodbyes, yes and no, consent words, hesitation and process questions, identity values, and anything using claims vocabulary. A code allowlist decides, matching the whole message, not a leading greeting ("hello, what is RL?" is off topic). If the extractor says out of scope but the allowlist matches the whole message, the code wins. A strike needs the extractor to say out of scope; when a guard model exists it must agree; if the guard did not run the extractor alone decides; if unsure, no strike. Pre-verification greetings get a fixed greeting template. |
+| 2026-10-20 | VER-06 reading (human decision, a Tier 1 reading, not a waiver): VER-06 forbids naming the failed item or revealing a stored value. The count ("N of 3 confirmed") and the list of outstanding options are required by the design and are allowed. When a caller supplies several items in one message, the reply states only the total count. |
+| 2026-10-20 | NFR-01 accepted Tier 2 deviation (human decision): a flagged post-verification reply is regenerated once, so the worst case after verification is 3 LLM calls on that turn, normally 2. Pre-verification turns make exactly 1 call. |
+| 2026-10-20 | Empathy lines (human decision): the fixed empathy lines in the pre-verification templates are the human's design and override the "specific to what the caller said" wording in FRONTEND_GUIDELINES section 8, for the pre-verification templates only. |
 
-Changelog: (none yet)
+Changelog:
+- 2026-10-20 CP1: added `insurance_claims/views.py` (view models, phase and factor constants, `build_view`) to keep `state.py` under the length rule. `state.py` re-exports `Event` and `SessionView`.
+- 2026-10-20 CP1: added `insurance_claims/ui/trymenu.py` for the Try menu (UI-08) so `sidebar.py` stays small.
+- 2026-10-20 CP1: added public method `Session.phase_done(phase)` so `views.py` can derive phase status without reading private state.
+- 2026-10-20 CP1: added extractor fields `asked_about_factor` (nullable enum of the five factor names) and `requests_protected` (boolean) to 4.2, the minimum needed to tell a clarifying question or a protected-data request apart from a partial answer.
+- 2026-10-20 CP1: before verification the whole reply is built by code from fixed templates (`prompts/verify_templates.json`, `templates.py`) with no responder LLM call, so the VERIFY_ID responder bundle of 4.3 no longer exists. Reason: live runs showed free model text invented content and false statements.
+- 2026-10-20 CP1: on the verification turn only, the post-verification bundle carries the full stored name and `verified_this_turn`, instead of the first name in 4.3. Reason: splitting the name produced a wrong greeting for multi-part names.

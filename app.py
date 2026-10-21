@@ -5,6 +5,8 @@ st.session_state keys:
     api_token: optional token typed in the sidebar, kept in this browser session only.
     notice:    a plain error message to show under the header, or None.
     unsent:    the caller text of a turn that failed, shown in the transcript, or None.
+    try_choice: the message picked in the Try menu, or None.
+    chat_text: the chat input's text, set by the Try menu to paste a message.
 """
 
 import html
@@ -17,6 +19,7 @@ from insurance_claims.llm import LLMError, OpenAICompatLLM
 from insurance_claims.orchestrator import handle_turn, new_session
 from insurance_claims.ui.sidebar import render_sidebar
 from insurance_claims.ui.theme import inject_css
+from insurance_claims.ui.trymenu import CHAT_KEY
 from insurance_claims.ui.transcript import render_transcript
 
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +68,7 @@ def send(text: str) -> None:
         st.session_state.notice = 'The reply failed, so try again.'
 
 
-prompt = st.chat_input('Type a message')
+prompt = st.chat_input('Type a message', key=CHAT_KEY)
 if prompt:
     send(prompt)
 

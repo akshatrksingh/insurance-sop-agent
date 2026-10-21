@@ -71,6 +71,8 @@ html, body, [data-testid="stApp"] {{
   padding: 4px 0; border-bottom: 1px solid {rule};
   font-variant-numeric: tabular-nums;
 }}
+.cs-tone-good {{ color: {t['verified']}; }}
+.cs-tone-warn {{ color: {t['caution']}; }}
 .cs-phase-row {{ font-size: 15px; padding: 6px 0 0; }}
 .cs-phase-row.current {{ font-weight: 600; color: {t['action']}; }}
 .cs-phase-row.done {{ color: {t['verified']}; }}

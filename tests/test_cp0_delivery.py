@@ -14,6 +14,7 @@ from conftest import LIVE_ENABLED, ROOT, SENTINEL
 from failhelpers import EXC_FACTORIES, boom_backend
 
 def _free_port():
+    """Return a free local TCP port."""
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         return s.getsockname()[1]
@@ -104,5 +105,5 @@ def test_safe_04_sidebar_token_location_in_session_state(no_key, record_property
     at.sidebar.text_input[0].set_value(SENTINEL).run()
     keys = [k for k in at.session_state if SENTINEL in repr(at.session_state[k])]
     record_property('keys_holding_sidebar_token', keys)
-    sess = at.session_state['session'] if 'session' in at.session_state else None
-    assert sess is None or SENTINEL not in repr(sess)
+    assert keys == ['api_token']
+    assert SENTINEL not in repr(at.session_state['session'])

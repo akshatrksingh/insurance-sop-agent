@@ -70,8 +70,11 @@ def test_sessions_are_isolated():
     assert b.view().turns == []
 
 
-def test_nfr_01_llm_calls_per_turn_at_most_2():
-    """NFR-01: at most 2 LLM calls per turn."""
+FULL = {'identity': {'full_name': 'Margaret Chen', 'dob': '1985-03-15', 'id_last4': '4472'}}
+
+
+def counting_llm(**kw):
+    """Return (llm, calls) where calls lists 'extract' and 'reply' in call order."""
     calls = []
 
     class Counting(FakeLLM):
@@ -83,12 +86,38 @@ def test_nfr_01_llm_calls_per_turn_at_most_2():
             calls.append('reply')
             return super().reply(*a, **k)
 
+    return Counting(**kw), calls
+
+
+def test_nfr_01_pre_verification_turns_make_exactly_one_call():
+    """NFR-01: before verification the only LLM call per turn is extract (the reply is built from templates)."""
+    llm, calls = counting_llm()
     s = new_session()
-    llm = Counting()
     for i in range(5):
         calls.clear()
         handle_turn(s, f'hello {i}', llm)
-        assert len(calls) <= 2, calls
+        assert calls == ['extract'], calls
+
+
+def test_nfr_01_post_verification_normal_turn_makes_two_calls():
+    """NFR-01: a normal post-verification turn makes extract plus reply, 2 calls."""
+    llm, calls = counting_llm(extractions={'v': FULL}, replies={'one': 'Understood.', 'two': 'Understood.'})
+    s = new_session()
+    handle_turn(s, 'v', llm)
+    for text in ('one', 'two'):
+        calls.clear()
+        handle_turn(s, text, llm)
+        assert calls == ['extract', 'reply'], calls
+
+
+def test_nfr_01_check_triggered_regeneration_makes_at_most_3_calls():
+    """NFR-01: a post-verification reply that trips the output check is regenerated once: 3 calls at most."""
+    llm, calls = counting_llm(extractions={'v': FULL}, replies={'one': 'Hello again, please wait.'})
+    s = new_session()
+    handle_turn(s, 'v', llm)
+    calls.clear()
+    handle_turn(s, 'one', llm)
+    assert calls == ['extract', 'reply', 'reply']
 
 
 def test_nfr_02_overhead_p95_under_50ms(record_property):

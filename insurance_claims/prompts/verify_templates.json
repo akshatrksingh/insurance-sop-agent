@@ -1,0 +1,55 @@
+{
+  "greeting": [
+    "Hello, I can help with your claim once I confirm who I am speaking with. {count} confirmed. Any of these still work, and one is enough to start: {options}.",
+    "Hello. Before we talk about a claim I need to confirm your identity, and the count below shows where we are. {count} confirmed so far. Which of these can you give me first: {options}?",
+    "Hello, thanks for calling claims support. To start I need to confirm who you are. {count} confirmed. You can begin with any of these: {options}."
+  ],
+  "partial": [
+    "Thanks. {count} confirmed. Any of these still work, and one is enough to move on: {options}.",
+    "Noted. {count} confirmed so far. What else can you give me from this list: {options}?",
+    "Thanks, I have checked that against our records. {count} confirmed. Which of these can you share next: {options}?",
+    "I have that. {count} confirmed. Next I can take any of these: {options}."
+  ],
+  "clarify": {
+    "full_name": [
+      "I ask for your full name to find the right policyholder record. {count} confirmed. Any of these still work: {options}."
+    ],
+    "dob": [
+      "Your date of birth is one of the details I can match against our records, so nobody else can see your claim. {count} confirmed. You can give me any of these: {options}."
+    ],
+    "phone": [
+      "A phone number lets me match you against our records without asking for anything more sensitive. {count} confirmed. Any of these still work: {options}."
+    ],
+    "email": [
+      "Your email is one of the details that protect your claim. {count} confirmed. Any of these still work: {options}."
+    ],
+    "id_last4": [
+      "The last four digits of your SSN confirm that you are the policyholder, and I never need the full number. {count} confirmed. Any of these still work: {options}."
+    ]
+  },
+  "refusal": [
+    "I can only talk about a claim after I confirm who you are, and that protects your information. {count} confirmed. Any of these work, and you choose which: {options}.",
+    "That is your choice. I cannot share any claim information until your identity is confirmed. {count} confirmed. Which of these would you be comfortable giving: {options}?",
+    "Identity checks protect your claim from anyone else who might call. {count} confirmed. You can pick any of these: {options}."
+  ],
+  "claim_request": [
+    "Claim details are protected until I confirm who you are. {count} confirmed. Any of these still work, and one is enough to start: {options}.",
+    "I can only open a claim after your identity is confirmed, whatever the request is. {count} confirmed. Which of these can you give me: {options}?",
+    "That information is protected, and my rules stay the same for every caller. {count} confirmed. You can start with any of these: {options}.",
+    "I cannot share that before your identity is confirmed. {count} confirmed. Any of these still work: {options}."
+  ],
+  "general": [
+    "I can help with that once your identity is confirmed. {count} confirmed. Any of these still work, and one is enough to start: {options}.",
+    "I stay with claim questions, and I can take yours after I confirm who you are. {count} confirmed. Which of these can you give me: {options}?",
+    "Once your identity is confirmed I can look into that. {count} confirmed. You can begin with any of these: {options}."
+  ],
+  "off_topic": [
+    "That is outside what I can help with here, since I handle insurance claim support. {count} confirmed. To get started on a claim, give me any of these: {options}.",
+    "I can only help with insurance claims, so I cannot answer that. {count} confirmed. If you have a claim question, start with any of these: {options}."
+  ],
+  "empathy": [
+    "It makes sense to want answers quickly, and I want to get you there.",
+    "That sounds stressful, and I will keep this short.",
+    "I hear that this is hard, and I will keep the steps few."
+  ]
+}

@@ -1,6 +1,7 @@
 """CP0 DEL-01 missing key notice timing and visibility."""
 
 
+from apphelpers import REPLY_MARK
 from failhelpers import app, visible, T
 
 def test_del_01_missing_key_notice_at_page_load(no_key):
@@ -34,7 +35,7 @@ def test_del_01_missing_key_notice_clears_when_token_pasted(no_key, monkeypatch)
     at.sidebar.text_input[0].set_value(T).run()
     at.chat_input[0].set_value('hello again').run()
     assert not at.error
-    assert 'This is a scripted reply.' in visible(at)
+    assert REPLY_MARK in visible(at)
 
 
 def test_del_01_missing_key_caller_message_visible(no_key):

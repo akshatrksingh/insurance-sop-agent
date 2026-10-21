@@ -12,6 +12,7 @@ MARGARET = ('Hi, I am Margaret Chen, policy POL-9921, my denied healthcare claim
 
 
 def stored_values():
+    """Policyholder and claim values from the fixtures that must not appear in the sidebar."""
     vals = set()
     for row in json.loads((FX / 'policyholders.json').read_text()):
         vals |= {str(v) for k, v in row.items() if k != 'party_id' and len(str(v)) > 3}
@@ -23,6 +24,7 @@ def stored_values():
 
 
 def sidebar_text(at):
+    """Join the sidebar markdown values."""
     return '\n'.join(m.value for m in at.sidebar.markdown)
 
 

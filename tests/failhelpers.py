@@ -26,10 +26,12 @@ class ConnectError(Exception):
 
 
 class CustomErr(Exception):
+    """Custom exception type for the failure matrix."""
     pass
 
 
 class TokenInRepr(Exception):
+    """Exception whose repr and str both contain the token."""
     def __repr__(self):
         return f'TokenInRepr({T})'
 
@@ -38,6 +40,7 @@ class TokenInRepr(Exception):
 
 
 def _chained():
+    """Build an exception whose cause holds the token."""
     try:
         raise ValueError(f'inner {T}')
     except ValueError as inner:
@@ -69,6 +72,7 @@ EXC_FACTORIES = {
 
 
 def boom_backend(monkeypatch, make_exc, where):
+    """Make OpenAICompatLLM a FakeLLM that raises make_exc() at init, extract, reply or both calls."""
     import insurance_claims.llm as llm
     calls = {'n': 0}
 
@@ -96,10 +100,12 @@ def boom_backend(monkeypatch, make_exc, where):
 
 
 def app():
+    """Build an AppTest for app.py."""
     return AppTest.from_file(str(ROOT / 'app.py'), default_timeout=60)
 
 
 def visible(at):
+    """Join all rendered text, chat messages and button labels."""
     out = []
     for kind in ('markdown', 'text', 'error', 'warning', 'info', 'success', 'caption', 'exception', 'code', 'title', 'header', 'subheader'):
         out += [str(getattr(e, 'value', '')) for e in getattr(at, kind)]

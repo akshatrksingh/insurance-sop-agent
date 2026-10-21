@@ -17,10 +17,15 @@ LIVE_ENABLED = bool(os.environ.get('LLM_API_KEY')) and os.environ.get('RUN_LIVE'
 
 
 def live_active(request):
+    """True when this test is marked live and both LLM_API_KEY and RUN_LIVE=1 are set."""
     return LIVE_ENABLED and request.node.get_closest_marker('live') is not None
 
 
 def pytest_configure(config):
+    """Register the custom markers and install the reply recorder before test modules import handle_turn."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import replyrecorder
+    replyrecorder.install()
     config.addinivalue_line('markers', 'live: needs LLM_API_KEY and RUN_LIVE=1, and network')
     config.addinivalue_line('markers', 'local_server: may connect to loopback only')
 
@@ -36,6 +41,7 @@ def text_files():
 
 @pytest.fixture
 def no_key(monkeypatch):
+    """Remove LLM_API_KEY from the environment for one test."""
     monkeypatch.delenv('LLM_API_KEY', raising=False)
 
 
@@ -50,7 +56,7 @@ def fake_backend(monkeypatch):
 
 @pytest.fixture
 def log_capture():
-    import logging
+    """Collect every log record emitted during the test, formatted with its arguments."""
     recs = []
 
     class H(logging.Handler):
@@ -70,6 +76,7 @@ def log_capture():
 
 @pytest.fixture
 def logs():
+    """Collect log records and their formatted tracebacks emitted during the test."""
     recs = []
 
     class H(logging.Handler):
