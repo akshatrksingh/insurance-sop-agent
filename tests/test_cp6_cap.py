@@ -103,7 +103,7 @@ def test_nfr_08_ui_shows_notice_at_cap(monkeypatch, fake_backend):
     """NFR-08: the UI shows the cap notice and does not add the message to the transcript."""
     at = capped_app(monkeypatch, fake_backend)
     assert not at.exception
-    assert 'Reset' in all_text(at) and 'token' in all_text(at)
+    assert 'Reset' in all_text(at) and 'Groq key' in all_text(at)
     assert ('Caller', 'over the cap') not in at.session_state['session'].view().turns
 
 

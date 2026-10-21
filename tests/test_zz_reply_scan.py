@@ -6,6 +6,7 @@ from templatecheck import GR_FIXED, check_reply
 from insurance_claims.llm import FakeLLM
 from insurance_claims.orchestrator import handle_turn, new_session
 
+RE_ASK = 'Please say yes to send it, or skip.'
 DASH = re.compile('[\u2013\u2014]')
 OPENER = re.compile(r'^\W*(hello|hi|hey|greetings|welcome|good)\b', re.I)
 TIME_OF_DAY = re.compile(r'good\s+(morning|afternoon|evening)', re.I)
@@ -16,7 +17,7 @@ EMOTION = re.compile(r'frustrat|upset|angry|anger|anxious|anxiety|worried|stress
 def hits_for(rec):
     """Names of the checks one recorded reply fails."""
     r, hits = rec['reply'], []
-    if re.search(r'\bplease\b', r, re.I):
+    if re.search(r'\bplease\b', r, re.I) and r != RE_ASK:  # one string approved as a Tier 2 LANG-02 waiver (SYSTEM_DESIGN section 8)
         hits.append('please')
     if TIME_OF_DAY.search(r):
         hits.append('time of day greeting')

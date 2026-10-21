@@ -20,12 +20,13 @@ from insurance_claims.allowlist import (  # noqa: F401
     normalize,
 )
 from insurance_claims.extractor import Extraction
+from insurance_claims.identity_text import identity_in_message
 from insurance_claims.injection import INJECTION, has_off_topic_request, is_injection  # noqa: F401
 
 
 def reconcile(extraction: Extraction, text: str) -> Extraction:
-    """Apply the allowlist: when it matches, or the extraction carries an identity value, the
-    message is in scope whatever the extractor said.
+    """Apply the allowlist: when it matches, or the extractor's identity value appears in the message,
+    the message is in scope whatever the extractor said.
 
     Args:
         extraction: The validated extractor output.
@@ -35,7 +36,7 @@ def reconcile(extraction: Extraction, text: str) -> Extraction:
         The extraction, with `in_scope` forced true for allowlisted messages and any turn
         that carries an identity value (a name has no lexical pattern).
     """
-    carries_identity = any(v for v in extraction.identity.model_dump().values())
+    carries_identity = identity_in_message(extraction.identity, text)  # SCOPE-02: the value must be in the message
     injected = is_injection(text) and not has_off_topic_request(text)  # SAFE-09: a real off-topic ask still strikes
     if extraction.in_scope or not (carries_identity or is_allowlisted(text) or injected):
         return extraction

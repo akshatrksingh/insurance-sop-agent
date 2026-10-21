@@ -85,8 +85,8 @@ def advance(session: Session) -> list[Event]:
     if not gates.verified:
         return events
     session.case_hint_dropped = False
-    if not gates.case_resolved and _drop_stale_case_hint(session):
-        session.case_hint_dropped = True
+    if _drop_stale_case_hint(session):  # B37: also after resolution, so no foreign id stays in memory
+        session.case_hint_dropped = not gates.case_resolved  # the reply and the resolved case do not change
         events.append(Event(kind='memory', text='Dropped: case_id (no such claim)', level='detail'))
     hints = hints_of(session)
     if not gates.case_resolved and (hints or session.intent):

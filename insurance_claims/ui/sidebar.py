@@ -18,6 +18,7 @@ KEY_CAPTION = (
 def _memory_section(view: SessionView) -> None:
     """Render the Session memory section."""
     st.markdown('<div class="cs-side-title">Session memory</div>', unsafe_allow_html=True)
+    st.caption('Test view. Not shown to callers in production.')
     st.markdown(
         '<div class="cs-note">Remembered from this chat. Cleared on reset.</div>',
         unsafe_allow_html=True,

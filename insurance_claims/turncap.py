@@ -5,7 +5,7 @@ from insurance_claims.state import Session
 
 CAP_NOTICE = (
     'This chat reached its message limit. Reset to start over, '
-    'or paste your own API token under Settings to keep going.'
+    'or paste your Groq key in the sidebar to keep going.'
 )
 
 
@@ -20,6 +20,11 @@ def cap_reached(session: Session, limit: int) -> bool:
     A limit of 0 means no cap.
     """
     return limit > 0 and not session.cap_lifted and caller_turns(session) >= limit
+
+
+def cap_banner(session: Session, own_token: str, limit: int) -> str | None:
+    """Return the cap notice to show now, or None. A visitor key in the field clears it at once."""
+    return CAP_NOTICE if cap_reached(session, limit) and not own_token.strip() else None
 
 
 def settings_for_turn(session: Session, own_token: str) -> Settings:

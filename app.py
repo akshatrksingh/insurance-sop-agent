@@ -23,7 +23,7 @@ from insurance_claims.ui.sidebar import render_sidebar
 from insurance_claims.ui.theme import inject_css
 from insurance_claims.ui.trymenu import CHAT_KEY
 from insurance_claims.ui.transcript import render_transcript
-from insurance_claims.turncap import CAP_NOTICE, cap_reached, settings_for_turn
+from insurance_claims.turncap import CAP_NOTICE, cap_banner, settings_for_turn
 
 logging.basicConfig(level=logging.INFO)
 for noisy in ('httpx', 'httpcore', 'openai'):
@@ -98,8 +98,11 @@ def key_missing() -> bool:
         return False
 
 
-capped = cap_reached(st.session_state.session, settings.max_turns)
-notice = st.session_state.notice or (CAP_NOTICE if capped else None) or (MISSING_KEY if key_missing() else None)
+own_token = st.session_state.get('api_token', '')
+if st.session_state.notice == CAP_NOTICE and own_token.strip():
+    st.session_state.notice = None  # a key in the field clears a stale cap banner at once
+cap = cap_banner(st.session_state.session, own_token, settings.max_turns)
+notice = st.session_state.notice or cap or (MISSING_KEY if key_missing() else None)
 if notice:
     st.error(notice)
 render_transcript(view, bool(st.session_state.get('show_details')))

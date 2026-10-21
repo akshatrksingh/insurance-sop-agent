@@ -10,6 +10,7 @@ import re
 
 from insurance_claims import tools
 from insurance_claims.data import get_party
+from insurance_claims.email_consent import CONFIRM_ASK, is_email_affirmative
 from insurance_claims.fields import asked_field
 from insurance_claims.state import Session
 from insurance_claims.views import EmailPreview, Event
@@ -48,9 +49,17 @@ def is_decline(message: str) -> bool:
 
 
 def read_consent(consent: str | None, message: str) -> str | None:
-    """Return the consent for the open email offer. A plain decline counts as no when the extractor
-    returned null. This fallback never produces a yes: a send needs the extractor's explicit yes."""
-    return 'no' if consent is None and is_decline(message) else consent
+    """Return the consent for the open email offer: `yes`, `no`, `confirm`, or None.
+
+    A plain decline is no, whatever the extractor said. A yes counts only when the whole message is
+    a plain affirmative; an extractor yes for any other text is `confirm` (re-ask, nothing sent). The
+    fallback never produces a yes: a send needs the extractor's explicit yes.
+    """
+    if consent != 'no' and is_decline(message):
+        return 'no'
+    if consent == 'yes' and not is_email_affirmative(message):
+        return 'confirm'
+    return consent
 
 
 def note_topic(session: Session, message: str) -> None:
@@ -72,7 +81,7 @@ def decide(session: Session, consent: str | None) -> tuple[str, list[Event], Ema
 
     Args:
         session: Updated in place.
-        consent: `yes`, `no`, or None (unclear).
+        consent: `yes`, `no`, `confirm` (a yes for text that is not a plain affirmative), or None (unclear).
 
     Returns:
         The fixed reply, new events, and the preview when an email was sent.
@@ -82,6 +91,8 @@ def decide(session: Session, consent: str | None) -> tuple[str, list[Event], Ema
         session.gates.email_choice_made = True
         session.pending_question = None
         return SKIPPED, [Event(kind='email_skipped', text='Skipped email summary')], None
+    if consent == 'confirm':
+        return CONFIRM_ASK, [], None
     if consent != 'yes':
         return REASK, [], None
     session.email_consent = True

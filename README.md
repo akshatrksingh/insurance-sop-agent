@@ -79,3 +79,17 @@ Tests that call the live model only run when both `LLM_API_KEY` and `RUN_LIVE=1`
 6. Keep the Secrets box empty apart from that one line.
 7. Deploy. After any change to Secrets, choose Reboot app so the new values load.
 8. Test on the hosted URL: paste a throwaway Groq key in the sidebar, send a first message, finish verification with a synthetic identity from the fixtures, ask about a claim, and check that the sidebar has no Try menu.
+
+## Known limitations
+
+- Model-built replies for open-ended follow-ups rely on the prompt and a heuristic grounding filter, and the empathy sentence on that path is unproven live.
+- A multi-part question may get only its first part answered.
+- Guidance answers are fixture text, and the file format answer is long.
+- The timing answer can imply reconsideration after the appeal deadline.
+- The model can fail or return invalid output, which is handled as an empty extraction.
+- The guardrail pattern lists are small, and the flag log keeps names and dates the caller typed.
+- The sidebar is a test view that shows matched factors, and the Try menu shows demo identities, so turn the Try menu off for the public demo.
+- Email is mocked, and the preview shows the stored address.
+- In bring-your-own-key mode the turn cap lifts when a visitor key is present.
+- Some settings need a restart after a change.
+- Free tier rate limits can slow replies.
