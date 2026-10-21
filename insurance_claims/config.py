@@ -1,6 +1,7 @@
 """Settings: Streamlit secrets first, then environment variables, then defaults."""
 
 import os
+from functools import lru_cache
 
 import streamlit as st
 from pydantic import BaseModel, SecretStr
@@ -61,3 +62,9 @@ def load_settings(sidebar_token: str = '') -> Settings:
         if found and found.isdigit():
             values[field] = int(found)
     return Settings(**values)
+
+
+@lru_cache(maxsize=1)
+def off_topic_limit() -> int:
+    """Return MAX_OFF_TOPIC (default 3), resolved once per process."""
+    return load_settings().max_off_topic

@@ -59,6 +59,14 @@ class Event(BaseModel):
     at: int | None = None
 
 
+class EmailPreview(BaseModel):
+    """The mock email shown in the UI. `to` is the preview recipient, the only place the address appears."""
+
+    to: str
+    subject: str
+    body: str
+
+
 class GateView(BaseModel):
     """One gate with its ticked flag."""
 
@@ -93,6 +101,8 @@ class SessionView(BaseModel):
     turns: list[tuple[str, str]]
     events: list[Event]
     extracted_fields: list[str] = []
+    email_offer_open: bool = False
+    email_preview: EmailPreview | None = None
 
 
 def _memory_rows(session: 'Session') -> list[MemoryRow]:
@@ -122,6 +132,12 @@ def _memory_rows(session: 'Session') -> list[MemoryRow]:
     return rows
 
 
+def _offer_open(session: 'Session') -> bool:
+    """True while the email offer waits for a choice."""
+    gates = session.gates
+    return gates.email_offered and not gates.email_choice_made and not session.escalated
+
+
 def build_view(session: 'Session') -> SessionView:
     """Return the data the UI may render for this session."""
     current = session.phase
@@ -146,4 +162,6 @@ def build_view(session: 'Session') -> SessionView:
         turns=list(session.turns),
         events=list(session.events),
         extracted_fields=list(session.extracted_fields),
+        email_offer_open=_offer_open(session),
+        email_preview=session.email_preview,
     )

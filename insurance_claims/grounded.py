@@ -1,5 +1,7 @@
 """Fixed replies built by code from bundle data. Used when a model reply fails the output checks."""
 
+from insurance_claims.fields import AMOUNTS, asked_field
+
 ASK = 'What do you need help with on your claim?'
 HUMAN_OFFER = 'I can connect you with a human representative to talk through next steps.'
 
@@ -87,41 +89,6 @@ def _claim_answer(bundle: dict) -> str:
         else:
             parts.append(_pick(OPEN_DEADLINES, seed, 0).format(date=date))
     return ' '.join(parts)
-
-
-FIELD_WORDS = {
-    'documents': ('document', 'paperwork'),
-    'status': ('status',),
-    'reason': ('why', 'reason'),
-    'deadline': ('deadline', 'appeal by', 'too late'),
-    'net_pay': ('net pay',),
-    'expected': ('reimburs', 'expected'),
-    'allowed': ('allowed', 'maximum'),
-}
-AMOUNTS = {
-    'net_pay': ('net_pay', 'The net pay is {m}.', 'Your net pay on this claim is {m}.', 'The net pay recorded is {m}.'),
-    'expected': (
-        'expected_reimbursement_amount',
-        'The expected reimbursement is {m}.',
-        'You can expect a reimbursement of {m}.',
-        'The expected reimbursement recorded is {m}.',
-    ),
-    'allowed': (
-        'allowed_max_amount',
-        'The allowed maximum is {m}.',
-        'The most that is allowed on this claim is {m}.',
-        'The allowed maximum recorded is {m}.',
-    ),
-}
-
-
-def asked_field(message: str) -> str | None:
-    """Return the one field a message asks for, or None when none or several match."""
-    text = message.lower()
-    if text.count('?') > 1:
-        return None
-    found = [f for f, words in FIELD_WORDS.items() if any(w in text for w in words)]
-    return found[0] if len(found) == 1 else None
 
 
 def field_reply(bundle: dict) -> str | None:

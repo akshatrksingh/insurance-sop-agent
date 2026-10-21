@@ -45,11 +45,12 @@ def recording_handle_turn(session, text, llm):
         except Exception:
             pass
     rows = session.view().model_dump()['memory_rows']
+    strikes = next((int(r['value']) for r in rows if r['label'] == 'Off-topic strikes'), 0)
     RECORDS.append({'reply': result.reply, 'prior_agent': prior, 'intensity': box['intensity'],
                     'confirmed': sum(1 for r in rows if r['value'] == 'matched'),
                     'matched_labels': [r['label'] for r in rows if r['value'] == 'matched'],
                     'verified': session.view().phase != 'VERIFY_ID', 'was_verified': was_verified,
-                    'label': box['label'], 'rejected': sum(1 for r, _ in session.view().turns if r == 'Caller') == turns_before})
+                    'label': box['label'], 'strikes': strikes, 'rejected': sum(1 for r, _ in session.view().turns if r == 'Caller') == turns_before})
     return result
 
 

@@ -39,7 +39,7 @@ def hits_for(rec):
 def membership_problems(records):
     """(problems, reply) for every pre-verification reply: the turn ended unverified and was not rejected."""
     checked = [r for r in records if not r['verified'] and not r['rejected']]
-    bad = [(check_reply(r['reply'], set(r['matched_labels']), r['label'], r['intensity']), r['reply'][:100]) for r in checked]
+    bad = [(check_reply(r['reply'], set(r['matched_labels']), r['label'], r['intensity'], strikes=r.get('strikes')), r['reply'][:100]) for r in checked]
     return len(checked), [b for b in bad if b[0]]
 
 
@@ -70,6 +70,14 @@ def test_scanner_detects_planted_defects():
         assert hits_for({**base, 'reply': text}), text
     assert hits_for({**base, 'prior_agent': 0, 'reply': 'Hello. ' + clean}) == []
     assert hits_for({**base, 'intensity': 2, 'reply': 'You sound upset. ' + clean}) == []
+
+
+def test_scope_02_human_offer_accepted_only_exact_and_after_limit_strikes():
+    """SCOPE-02: the fixed pre-verification human offer passes only as the exact text with strikes at the limit or more."""
+    from templatecheck import HUMAN_OFFER
+    assert check_reply(HUMAN_OFFER, set(), strikes=3) == [] and check_reply(HUMAN_OFFER, set(), strikes=5) == []
+    assert check_reply(HUMAN_OFFER, set(), strikes=2) and check_reply(HUMAN_OFFER, set())
+    assert check_reply(HUMAN_OFFER + ' Now.', set(), strikes=3) and check_reply(HUMAN_OFFER.replace('cannot', 'can not'), set(), strikes=3)
 
 
 def test_membership_check_detects_planted_defects():

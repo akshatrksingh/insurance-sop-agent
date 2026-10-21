@@ -15,3 +15,12 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - CP2, UI: the Status memory row shows the raw stored hint ("rejected", not "denied"). Accepted by the human, no action.
 - Filler purpose phrases ("to support your claim") cannot be rejected in code on the model path (multi-field and open-ended follow-ups). Accepted, tester finding in CP2 round 4.
 - CP2, GLASS_ALPHA: constant stays in the section 4.5 public names although glass CSS is cut. Accepted, no action.
+- CP4, B1: key event "Email not sent" uses done (success) styling; BAD_ADDRESS is non-recoverable but the reply says "Say yes to try again". CP4 coder and reviewer T3-6.
+- CP4, B2: "Send summary" produces the event "Email sent" while "Skip" produces "Skipped email summary"; FRONTEND_GUIDELINES section 6 wants one name per action. Reviewer T3-5.
+- CP4, B3: SEND_FAILED reply is two sentences (guideline says one). Reviewer T3-6.
+- CP4, B4: `.format()` in grounded.py (lines about 74 to 151) and double-quoted strings in claims.py against the code style rules. Reviewer T3-3, T3-4.
+- CP4, B5: the Send summary button sends while a human-representative question is outstanding. Accepted by main thread as explicit consent (button label names the action); revisit if the human disagrees. Tester issue 1.
+- CP4, B6: MAX_OFF_TOPIC is cached at first read; an env change mid-process is not picked up. Tester issue 3.
+- CP4, B7: "no thanks" mid-case (no offer open) moves the session to POST_PROCESS and opens the email offer. Tester fact.
+- CP4, B8: a cold `wants_human` before any human offer gets the greeting template. Belongs to CP5 (handoff rules).
+- CP4, B9: tests/test_cp4_carryover.py imports BUNDLE from another test module (same hygiene as the CP2 T3-10 item). Reviewer T3-7.

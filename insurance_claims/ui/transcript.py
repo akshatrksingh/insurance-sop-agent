@@ -6,7 +6,13 @@ import streamlit as st
 
 from insurance_claims.views import Event, SessionView
 
-EVENT_CLASS = {'phase_done': 'done', 'email_sent': 'done', 'handoff': 'handoff'}
+EVENT_CLASS = {
+    'phase_done': 'done',
+    'email_sent': 'done',
+    'handoff': 'handoff',
+    'handoff_offer': 'handoff',
+    'email_failed': 'handoff',
+}
 
 
 def _escape(text: str) -> str:

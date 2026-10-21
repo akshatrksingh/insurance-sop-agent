@@ -46,6 +46,8 @@ insurance_claims/
   prompts/                 prompt text files
   config.py  data.py  llm.py  state.py  verify.py  extractor.py
   phases.py  tools.py  scope.py  responder.py  orchestrator.py
+  flow.py  postprocess.py  handoff.py  leakscan.py  claims.py  fields.py
+  (also cases, bundles, grounding, grounded, templates, views)
   ui/                      theme.py  transcript.py  sidebar.py
 tests/
 ```
@@ -65,7 +67,13 @@ tests/
 | `templates` | pre-verification replies built from `prompts/verify_templates.json` (no model text) |
 | `views` | view models (`Event`, `SessionView`) and phase and factor constants, re-exported by `state` |
 | `responder` | post-verification reply composition and output checks (dashes, banned words, repeat greeting or announcement, emotion words) |
-| `orchestrator` | `new_session`, `handle_turn` |
+| `flow` | per-turn reply selection and gate movement after the state update |
+| `postprocess` | email offer, consent decision, summary and mock send |
+| `handoff` | off-topic decline, human offer after MAX_OFF_TOPIC, handoff text, human answer |
+| `leakscan` | SAFE-05 scan of pre-verification replies |
+| `claims` | outcome and action claim vocabulary used by `grounding` |
+| `fields` | which single claim field a follow-up asks for, and the amount phrasings |
+| `orchestrator` | `new_session`, `handle_turn`, `handle_choice` |
 | `ui` and `app.py` | rendering from `Session.view()` only, no business logic |
 
 ## 3. Requirements
@@ -306,6 +314,7 @@ If this file is silent or contradictory: stop, ask the human, log the answer bel
 | 2026-10-20 | Guardrail (human decision): guard model `openai/gpt-oss-safeguard-20b` (Preview on Groq, to be stated in the README). Build as its own stage after CP4, before CP5. Guard failure, timeout or rate limit means benign (SAFE-09). Logging exception: flagged messages only are logged, redacted and cut to 500 characters, to stdout and an optional webhook (SAFE-10). NFR-01 amended to at most 3 calls. The human asked for SAFE-07 to SAFE-10; the failure rule became its own ID, so the set is SAFE-07 to SAFE-11. | SUPERSEDED by the GR-lite row below (2026-10-20).
 | 2026-10-20 | LANG-02 scan scope (human decision): the scan excludes the Try menu caller messages (`insurance_claims/ui/trymenu.py` sample input), because they are the caller's sample input taken from the assignment's demo utterance. All agent, template, UI and prompt text stays scanned. |
 | 2026-10-20 | Stale case_id hint (human decision): when a stored `case_id` hint matches no claim of the verified party (including another party's id), code drops that hint from stored memory and the reply is one fixed question (`CASE_QUESTION` in `cases.py`, no model text, no claim data). Later turns resolve normally once a new case_id or other usable hints are stated. The status row shows the raw stored hint, so it no longer shows a dropped one. On the verification turn the hint is dropped but the normal reply is used, so the verification confirmation is kept. |
+| 2026-10-20 | Email address exception (coder-logged, pending human confirmation): `EmailPreview.to` shows the stored address in the preview card only, as the mock email recipient (POST-04). It appears nowhere else in the UI, which is a reading of FRONTEND_GUIDELINES section 1. |
 
 Changelog:
 - 2026-10-20 CP1: added `insurance_claims/views.py` (view models, phase and factor constants, `build_view`) to keep `state.py` under the length rule. `state.py` re-exports `Event` and `SessionView`.
@@ -319,5 +328,11 @@ Changelog:
 - 2026-10-20 CP2: the RESOLVE_INTENT bundle carries no first name (4.3 says it does); the full stored name appears only on the verification turn, as in the CP1 entry below.
 - 2026-10-20 CP1: on the verification turn only, the post-verification bundle carries the full stored name and `verified_this_turn`, instead of the first name in 4.3. Reason: splitting the name produced a wrong greeting for multi-part names.
 - 2026-10-20 CP2 fix round 1: LANG-02 scan excludes the Try menu caller messages (see decision log). Added `Session.case_hint_dropped` (bool, set by code for one turn) and `CASE_QUESTION` for the stale case_id hint rule. Added `GUARD_MODE` to the config list (guardrail stage).
-
-- 2026-10-20 Guardrail replaced: module `guard` becomes `gr_lite` (code only); SAFE-07 to SAFE-09 rewritten, old SAFE-07..11 and UI-10 superseded, NFR-01 back to 2 calls, `GUARD_MODEL`, `GUARD_WEBHOOK_URL`, `GUARD_MODE` removed from config, NFR-08 throttle removed, glass CSS waived.
+- 2026-10-20 Guardrail replaced: module `guard` becomes `gr_lite` (code only); SAFE-07 to SAFE-09 rewritten, old SAFE-07..11 and UI-10 superseded, NFR-01 back to 2 calls, `GUARD_MODEL`, `GUARD_WEBHOOK_URL`, `GUARD_MODE` removed from config, NFR-08 throttle removed, glass CSS waived.- 2026-10-20 CP4: added modules `postprocess` (email offer, consent, send), `handoff` (off-topic decline, human offer after MAX_OFF_TOPIC, handoff text), `flow` (reply selection per turn, moved out of `orchestrator`), `leakscan` (SAFE-05) and `ui/emailcard.py` (Send summary and Skip buttons, preview card). `config.off_topic_limit()` wires MAX_OFF_TOPIC.
+- 2026-10-20 CP4: added public `orchestrator.handle_choice(session, 'yes' | 'no')` for the email buttons. It runs the same `postprocess.decide` as typed consent. `EmailPreview` now lives in `views.py` and is re-exported by `orchestrator`.
+- 2026-10-20 CP4: added `Session.email_preview`, `Session.human_offered`, `Session.topics`, and `SessionView.email_offer_open` and `SessionView.email_preview`. The preview recipient is the only place the stored email address reaches the UI (POST-04).
+- 2026-10-20 CP4: POST_PROCESS replies, the off-topic decline, the human offer and the handoff are fixed code text, so the POST_PROCESS bundle of 4.3 is not built. `tools.build_summary` uses state and the resolved claim only, never turn text, so rejected or off-topic messages cannot reach the summary. `tools._error` became `tools.error_result`, `tools._load_claims` became `tools.load_claims`.
+- 2026-10-20 CP4: caller_done is set by code when the extractor says `wants_to_end` or the whole message is a goodbye or thanks, after the case was answered. The human handoff is accepted when a human was offered and the extractor reports `wants_human` or `consent` yes. The extractor prompt describes both. Pre-verification strike 3 and later replies are the fixed human offer, not a `verify_templates.json` template.
+- 2026-10-20 CP4: event wording: key events `Email sent`, `Skipped email summary`, `Email not sent`, `Human representative offered`, `Handed off to a human representative`; detail event `Email summary offered`.
+- 2026-10-20 CP4: added `claims.py` (outcome and action claim vocabulary, moved out of `grounding.py`) and `fields.py` (`asked_field` and `AMOUNTS`, moved out of `grounded.py`) in the carryover fixes.
+- 2026-10-20 CP4 fix round 1: added `Session.pending_question` (`email`, `human` or None), one open yes or no question at a time. A yes answers only the pending question: while it is `human`, a yes escalates and never reaches `postprocess.decide`; while it is `email`, a yes never triggers a handoff. A no to the human offer returns to the email question if it is still open and sets no email gate.

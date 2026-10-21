@@ -8,6 +8,7 @@ st.session_state keys:
     try_choice: the message picked in the Try menu, or None.
     chat_text: the chat input's text, set by the Try menu to paste a message.
     show_details: the Show details toggle in the sidebar (detail events and extractor field names).
+    email_send, email_skip: the email offer buttons (Send summary, Skip), shown while an offer is open.
 """
 
 import html
@@ -17,7 +18,8 @@ import streamlit as st
 
 from insurance_claims.config import load_settings
 from insurance_claims.llm import LLMError, OpenAICompatLLM
-from insurance_claims.orchestrator import handle_turn, new_session
+from insurance_claims.orchestrator import handle_choice, handle_turn, new_session
+from insurance_claims.ui.emailcard import render_email
 from insurance_claims.ui.sidebar import render_sidebar
 from insurance_claims.ui.theme import inject_css
 from insurance_claims.ui.trymenu import CHAT_KEY
@@ -69,6 +71,11 @@ def send(text: str) -> None:
         st.session_state.notice = 'The reply failed, so try again.'
 
 
+def choose(choice: str) -> None:
+    """Apply an email button (`yes` or `no`) through the same code path as typed consent."""
+    handle_choice(st.session_state.session, choice)
+
+
 prompt = st.chat_input('Type a message', key=CHAT_KEY)
 if prompt:
     send(prompt)
@@ -93,3 +100,4 @@ notice = st.session_state.notice or (MISSING_KEY if key_missing() else None)
 if notice:
     st.error(notice)
 render_transcript(view, st.session_state.unsent, bool(st.session_state.get('show_details')))
+render_email(view, lambda: choose('yes'), lambda: choose('no'))

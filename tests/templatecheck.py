@@ -12,6 +12,10 @@ WORDS = {'Full name': 'full name', 'Date of birth': 'date of birth', 'Phone': 'p
 FACTOR_KEYS = {'full_name': 'Full name', 'dob': 'Date of birth', 'phone': 'Phone', 'email': 'Email', 'id_last4': 'ID last 4'}
 EMPATHY = TEMPLATES['empathy']
 NEGATIVE = ('frustration', 'anger', 'anxiety')
+# Fixed pre-verification human offer (SCOPE-02). It is code text, not a key of verify_templates.json, so it is accepted
+# only as this exact string and only once the off-topic strike count has reached the default limit.
+HUMAN_OFFER = 'I cannot help with that here. Would you like me to connect you with a human representative?'
+OFFER_AFTER_STRIKES = 3
 
 
 def options_text(unconfirmed):
@@ -60,8 +64,11 @@ def empathy_allowed(label, intensity):
     return label in NEGATIVE and intensity >= 2
 
 
-def check_reply(reply, confirmed, label='neutral', intensity=0, groups_=None):
-    """Return a list of problems (empty when the reply is an allowed template with correct slots)."""
+def check_reply(reply, confirmed, label='neutral', intensity=0, groups_=None, strikes=None):
+    """Return a list of problems (empty when the reply is an allowed template with correct slots).
+    HUMAN_OFFER is accepted only when strikes is given and at least OFFER_AFTER_STRIKES."""
+    if reply == HUMAN_OFFER and strikes is not None and strikes >= OFFER_AFTER_STRIKES:
+        return []
     line, rest = split_empathy(reply)
     problems = []
     if line and not empathy_allowed(label, intensity):

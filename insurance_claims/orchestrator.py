@@ -1,31 +1,23 @@
-"""Turn handling: `new_session` and `handle_turn`."""
+"""Turn handling: `new_session`, `handle_turn`, and `handle_choice` for the email buttons."""
 
 import logging
 
 from pydantic import BaseModel
 
-from insurance_claims.llm import FakeLLM, OpenAICompatLLM
 from insurance_claims.extractor import Extraction
-from insurance_claims.bundles import build_bundle
-from insurance_claims.cases import CASE_QUESTION
-from insurance_claims.grounded import field_reply, first_reply
-from insurance_claims.phases import mark_answered, update_state
-from insurance_claims.responder import compose_reply
+from insurance_claims.flow import build_reply
+from insurance_claims.handoff import CLOSED, HANDOFF_AGAIN
+from insurance_claims.llm import FakeLLM, OpenAICompatLLM
+from insurance_claims.phases import update_state
+from insurance_claims.postprocess import decide
 from insurance_claims.scope import reconcile
-from insurance_claims.templates import verify_reply
 from insurance_claims.state import Session
-from insurance_claims.views import Event
+from insurance_claims.views import EmailPreview, Event
 
 logger = logging.getLogger(__name__)
 MAX_MESSAGE_CHARS = 2000
-
-
-class EmailPreview(BaseModel):
-    """The mock email shown in the UI. Used from CP4."""
-
-    to: str
-    subject: str
-    body: str
+CHOICES = {'yes': 'Send summary', 'no': 'Skip'}
+NO_OFFER = 'There is no email offer to answer right now.'
 
 
 class TurnResult(BaseModel):
@@ -41,6 +33,25 @@ def new_session() -> Session:
     return Session()
 
 
+def _commit(session: Session, draft: Session, old_phase: str) -> None:
+    """Copy the finished working copy into the session and log the phase change."""
+    for name in Session.model_fields:
+        setattr(session, name, getattr(draft, name))
+    if old_phase != session.phase:
+        logger.info('Phase change: %s -> %s (session=%s)', old_phase, session.phase, session.session_id)
+    logger.info('Turn %d done (session=%s)', session.turn_count, session.session_id)
+
+
+def _finish(session: Session, draft: Session, old_phase: str, reply: str, events: list[Event]) -> None:
+    """Stamp events at the reply position, append the reply, count the turn, and commit."""
+    for event in events:
+        event.at = len(draft.turns)
+    draft.events += events
+    draft.turns.append(('Agent', reply))
+    draft.turn_count += 1
+    _commit(session, draft, old_phase)
+
+
 def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> TurnResult:
     """Run one caller turn: extract, update state, gate, reply.
 
@@ -51,7 +62,8 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
 
     Returns:
         The reply and any new events. A rejected message returns a notice and counts as no turn.
-        State is committed only after the reply succeeds.
+        State is committed only after the reply succeeds. After a handoff or the end of the call
+        the reply is fixed and no model is called.
 
     Raises:
         LLMError: When the model call fails. The session is left unchanged.
@@ -66,32 +78,39 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
         session.turns.append(('Agent', notice))
         return TurnResult(reply=notice)
     draft = session.model_copy(deep=True)
-    extraction = reconcile(_read(llm, message, draft), message)
-    draft.turns.append(('Caller', message))
     old_phase = draft.phase
+    draft.turns.append(('Caller', message))
+    if old_phase in ('ESCALATED', 'COMPLETE'):
+        reply = CLOSED if old_phase == 'COMPLETE' else HANDOFF_AGAIN
+        _finish(session, draft, old_phase, reply, [])
+        return TurnResult(reply=reply)
+    extraction = reconcile(_read(llm, message, session), message)
     events = update_state(draft, extraction)
-    if draft.phase == 'VERIFY_ID':
-        reply = verify_reply(draft, extraction)
-    elif draft.case_hint_dropped and old_phase != 'VERIFY_ID' and not draft.gates.case_resolved:
-        reply = CASE_QUESTION
-    else:
-        verified_this_turn = old_phase == 'VERIFY_ID'
-        prompt_name, bundle = build_bundle(draft, message, verified_this_turn)
-        if prompt_name == 'process_case' and bundle['first_answer']:
-            reply = first_reply(bundle)  # the first claim answer is built by code from the bundle
-        else:
-            reply = (field_reply(bundle) if prompt_name == 'process_case' else None) or compose_reply(
-                llm, prompt_name, bundle
-            )
-        mark_answered(draft)
-    draft.turns.append(('Agent', reply))
-    draft.turn_count += 1
-    for name in Session.model_fields:
-        setattr(session, name, getattr(draft, name))
-    if old_phase != session.phase:
-        logger.info('Phase change: %s -> %s (session=%s)', old_phase, session.phase, session.session_id)
-    logger.info('Turn %d done (session=%s)', session.turn_count, session.session_id)
-    return TurnResult(reply=reply, events=events)
+    reply, more, preview = build_reply(draft, extraction, message, old_phase, llm)
+    _finish(session, draft, old_phase, reply, more)
+    return TurnResult(reply=reply, events=events + more, email_preview=preview)
+
+
+def handle_choice(session: Session, choice: str) -> TurnResult:
+    """Apply an email button (`yes` for Send summary, `no` for Skip) through the same path as typed consent.
+
+    Args:
+        session: The session, updated in place.
+        choice: `yes` or `no`.
+
+    Returns:
+        The reply, events, and the preview when an email was sent. When no offer is open, a notice
+        and no change.
+    """
+    gates = session.gates
+    if choice not in CHOICES or not gates.email_offered or gates.email_choice_made or session.escalated:
+        return TurnResult(reply=NO_OFFER)
+    draft = session.model_copy(deep=True)
+    old_phase = draft.phase
+    draft.turns.append(('Caller', CHOICES[choice]))
+    reply, events, preview = decide(draft, choice)
+    _finish(session, draft, old_phase, reply, events)
+    return TurnResult(reply=reply, events=events, email_preview=preview)
 
 
 def _read(llm: OpenAICompatLLM | FakeLLM, message: str, session: Session) -> Extraction:

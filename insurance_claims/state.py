@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from insurance_claims.extractor import Emotion
 from insurance_claims.views import (
+    EmailPreview,
     PHASE_GATES,
     PHASES,
     Event,
@@ -45,6 +46,10 @@ class Session(BaseModel):
     resistance_count: int = 0
     emotion: Emotion = Emotion()
     email_consent: bool | None = None
+    email_preview: EmailPreview | None = None
+    human_offered: bool = False
+    pending_question: str | None = None  # the one open yes/no question: 'email', 'human', or None
+    topics: list[str] = []
     turn_count: int = 0
     turns: list[tuple[str, str]] = []
     events: list[Event] = []

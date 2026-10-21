@@ -63,6 +63,13 @@ html, body, [data-testid="stApp"] {{
 .cs-event.done {{ border-left-color: {t['verified']}; }}
 .cs-event.handoff {{ border-left-color: {t['caution']}; }}
 .cs-event.detail {{ color: {t['ink_secondary']}; }}
+.cs-card {{
+  background: {t['glass']}; border: 1px solid {rule}; border-radius: 6px;
+  padding: 12px 16px; margin: 12px 0;
+}}
+.cs-card-subject {{ font-size: 15px; font-weight: 600; margin-bottom: 4px; }}
+.cs-card-meta {{ font-size: 13px; color: {t['ink_secondary']}; margin-bottom: 8px; }}
+.cs-card-body {{ font-size: 15px; line-height: 1.5; }}
 .cs-empty {{ font-size: 15px; color: {t['ink_secondary']}; padding: 12px 0; }}
 .cs-side-title {{ font-size: 15px; font-weight: 600; margin: 8px 0 4px; }}
 .cs-note {{ font-size: 13px; color: {t['ink_secondary']}; margin-bottom: 8px; }}
