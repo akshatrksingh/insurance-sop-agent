@@ -3,6 +3,11 @@
 import streamlit as st
 
 TRY_MESSAGES = (
+    (
+        'I am Margaret Chen, policy POL-9921, calling about my denied healthcare claim from January. '
+        'My DOB is 1985-03-15 and my SSN last four is 4472.'
+    ),
+    'My name is Margaret Chen and I am calling about my denied healthcare claim from January.',
     'Hi, I need help with my claim.',
     'My name is Margaret Chen.',
     'My date of birth is 1985-03-15.',

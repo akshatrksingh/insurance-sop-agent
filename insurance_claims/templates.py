@@ -43,7 +43,7 @@ def pick_situation(session: Session, extraction: Extraction) -> str:
     Returns:
         A key of the template file, or `clarify` (the factor is chosen later).
     """
-    first_turn = not any(who == 'Agent' for who, _ in session.turns)
+    first_turn = session.turn_count == 0  # error notices do not count as a turn
     upset = _negative(extraction)
     last = session.turns[-1][1] if session.turns else ''
     closing = scope.kind(last) == 'closing'

@@ -109,7 +109,7 @@ logger.warning('Extractor returned invalid JSON (session=%s)', session_id)
 logger.debug('Bundle keys: %s', list(bundle))  # keys only, never values
 ```
 
-Never log tokens, credentials, PII, or caller text.
+Never log tokens, credentials, PII, or caller text. One exception (SAFE-10): a message the guard flagged may be logged with its category, label and score, after redacting emails, phones and runs of 4 or more digits and cutting to 500 characters. A guard call failure logs the error type only (SAFE-09).
 
 ## Changelog
 

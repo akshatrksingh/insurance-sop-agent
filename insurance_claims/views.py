@@ -92,6 +92,7 @@ class SessionView(BaseModel):
     memory_rows: list[MemoryRow]
     turns: list[tuple[str, str]]
     events: list[Event]
+    extracted_fields: list[str] = []
 
 
 def _memory_rows(session: 'Session') -> list[MemoryRow]:
@@ -144,4 +145,5 @@ def build_view(session: 'Session') -> SessionView:
         memory_rows=_memory_rows(session),
         turns=list(session.turns),
         events=list(session.events),
+        extracted_fields=list(session.extracted_fields),
     )

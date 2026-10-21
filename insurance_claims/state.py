@@ -40,6 +40,7 @@ class Session(BaseModel):
     memory: dict[str, str] = {}
     intent: str | None = None
     resolved_case_id: str | None = None
+    case_hint_dropped: bool = False
     off_topic_strikes: int = 0
     resistance_count: int = 0
     emotion: Emotion = Emotion()
@@ -47,6 +48,7 @@ class Session(BaseModel):
     turn_count: int = 0
     turns: list[tuple[str, str]] = []
     events: list[Event] = []
+    extracted_fields: list[str] = []
 
     def phase_done(self, phase: str) -> bool:
         """Return True when every gate of the phase is set."""

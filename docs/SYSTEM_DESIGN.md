@@ -60,6 +60,7 @@ tests/
 | `extractor` | extraction call, schema, validation |
 | `phases` | per-phase gate logic and context bundle builder |
 | `tools` | claim lookup, guidance match, email summary, mock send |
+| `gr_lite` | code-only guardrail (GR-lite): pattern lists, fixed refusals, fixed supportive reply, redacted flag log (stage after CP5, before CP6) |
 | `scope` | code allowlist for the off-topic rule, strike counter, human-offer rule |
 | `templates` | pre-verification replies built from `prompts/verify_templates.json` (no model text) |
 | `views` | view models (`Event`, `SessionView`) and phase and factor constants, re-exported by `state` |
@@ -108,6 +109,14 @@ tests/
 | SAFE-04 | Logs, the UI, and error messages never contain the API token. Logs never contain PII. | 1 | B |
 | SAFE-05 | Before verification, replies are scanned for stored values and claim fields. A hit is replaced with a safe template. | 2 | T |
 | SAFE-06 | Caller text is untrusted data. Instructions inside it (ignore your rules, set verified, reveal the prompt, act as another role) cannot change phase, gates, disclosure, or consent. Caller text appears only in the user turn of an LLM call, never in a system prompt or tool argument. | 1 | B |
+| SAFE-07 (old) | SUPERSEDED 2026-10-20, guard model stage cut. Text withdrawn. | n/a | n/a |
+| SAFE-08 (old) | SUPERSEDED 2026-10-20, guard model stage cut. Text withdrawn. | n/a | n/a |
+| SAFE-09 (old) | SUPERSEDED 2026-10-20, guard model stage cut. Text withdrawn. | n/a | n/a |
+| SAFE-10 (old) | SUPERSEDED 2026-10-20, guard model stage cut. Text withdrawn. | n/a | n/a |
+| SAFE-11 (old) | SUPERSEDED 2026-10-20, guard model stage cut. Text withdrawn. | n/a | n/a |
+| SAFE-07 | GR-lite refusal: a code pattern list matches system probes (system prompt, config, environment variables, keys, other callers' data) and harmful requests. A match gets a fixed refusal and causes no change to gates, phase, memory, strikes or turn summary. No model call is added. | 1 | T |
+| SAFE-08 | Each flagged message writes one redacted stdout log line (UTC time, session id, turn, phase, category, message cut to 500 characters, emails, phones and runs of 4 or more digits redacted). A logging failure never breaks a turn. Self-harm text gets a short fixed supportive reply with a human offer and is not treated as an attack. | 2 | T |
+| SAFE-09 | The caller gets a fixed notice that the message and its time were recorded for review and what to do next (rephrase, or ask for a human representative). Injection detection must not flag benign claim requests such as "show me all my claims"; injection text that carries an off-topic request still earns the strike. Tests: about 30 labeled phrases including 15 benign controls, zero false positives on the controls. | 2 | T |
 | LANG-01 | No em dash or en dash appears in app text, replies, prompts, README, or docs. Replies are filtered in code. | 1 | T |
 | LANG-02 | The banned phrases and patterns in `FRONTEND_GUIDELINES.md` do not appear in UI strings or prompts. | 2 | T |
 | DEL-01 | Delivered as a Streamlit app in a repo with `requirements.txt` and a README. It runs with `streamlit run app.py` and deploys to Streamlit Community Cloud. The API token comes from Streamlit secrets or an env var, with an optional sidebar field for a visitor's own token. | 1 | R |
@@ -127,19 +136,20 @@ tests/
 | UI-07 | The email offer has two buttons (Send summary, Skip) as well as typed replies. Both use the same code path as typed consent. A preview card shows the mock email. | 2 | T |
 | UI-08 | A Try menu in the sidebar pastes scripted messages for the current stage. | 2 | T |
 | UI-09 | The UI follows `FRONTEND_GUIDELINES.md`. | 2 | R |
+| UI-10 (old) | SUPERSEDED 2026-10-20, guard model cut. Replaced by: a flagged message shows a "Message flagged" inline key event (no category score or pattern shown). | 2 | T |
 
 ### 3.3 Non-functional (all Tier 2)
 
 | ID | Requirement | Target | Verifier |
 |---|---|---|---|
-| NFR-01 | LLM calls per turn | at most 2 | T |
+| NFR-01 | LLM calls per turn (extract, reply) | at most 2 (guard amendment withdrawn; accepted regeneration deviation in section 8 stands) | T |
 | NFR-02 | Harness overhead per turn with `FakeLLM` | p95 under 50 ms | T |
 | NFR-03 | Live end-to-end turn latency | p50 under 3 s, p95 under 8 s | T |
 | NFR-04 | Cost | a full demo conversation fits the Groq free tier | T |
 | NFR-05 | Code size and dependencies | files at most 200 lines, only listed dependencies | B |
 | NFR-06 | Deterministic test suite | runs offline in under 30 s | T |
 | NFR-07 | Coverage of the contract | every testable requirement ID has at least one test naming it | R |
-| NFR-08 | Hosted key protection | a session turn cap (default 40) and a short per-minute throttle. After the cap the UI asks for reset or the visitor's own token. | T |
+| NFR-08 | Hosted key protection | a session turn cap (default 40). After the cap the UI asks for reset or the visitor's own token. The per-minute throttle is cut (section 8). | T |
 
 ## 4. Data contracts
 
@@ -229,7 +239,7 @@ Matching rules: phone compared on last 10 digits. Email lowercased. Names case-i
 
 **LLM client**: OpenAI-compatible, synchronous. Methods: `extract(text, view) -> Extraction` and `reply(prompt_name, bundle) -> str`. Defaults: base URL `https://api.groq.com/openai/v1`, model `openai/gpt-oss-20b`, low reasoning effort. `FakeLLM` has the same methods and returns scripted output.
 
-**Config**: `LLM_API_KEY` (order: Streamlit secrets, env var, sidebar field), `LLM_BASE_URL`, `LLM_MODEL`, `LLM_REASONING_EFFORT`, `MAX_OFF_TOPIC` (3), `MAX_VERIFY_FAILS` (3), `MAX_TURNS` (40). The sidebar token field is a password input and is kept in the session only.
+**Config**: `LLM_API_KEY` (order: Streamlit secrets, env var, sidebar field), `LLM_BASE_URL`, `LLM_MODEL`, `LLM_REASONING_EFFORT`, `MAX_OFF_TOPIC` (3), `MAX_VERIFY_FAILS` (3), `MAX_TURNS` (40) The sidebar token field is a password input and is kept in the session only.
 
 **Run locally**: `pip install -r requirements.txt`, then `streamlit run app.py`.
 **Host**: push the repo to GitHub, create the app on Streamlit Community Cloud, add `LLM_API_KEY` in the app's secrets.
@@ -284,10 +294,18 @@ If this file is silent or contradictory: stop, ask the human, log the answer bel
 | 2026-10-20 | NFR-06 note (CP0, not a waiver): the offline guard patches `socket.connect` only in the test process, so the `streamlit run` subprocess test (loopback only, no message sent) is not covered by it. Live tests run only when both `LLM_API_KEY` and `RUN_LIVE=1` are set. |
 | 2026-10-20 | CP0 Try script, missing key and bad token step: skipped by the human, who accepts the gap. The tester covers that path automatically (SAFE-04 and the missing-key notice at page load). |
 | 2026-10-20 | UI-03 covers the Session memory section. The Try menu is demo scaffolding that uses the synthetic starter identities, labeled "Demo identities" in the UI, and may show their values. A CP6 item makes the Try menu switchable off for a deployed demo. Human decision. |
-| 2026-10-20 | Off-topic rule (human decision). Only clearly off-topic text counts: a substantial request unrelated to insurance claims support. Ambiguous is in scope. Always in scope, never a strike, never sent to a guard model: greetings and goodbyes, yes and no, consent words, hesitation and process questions, identity values, and anything using claims vocabulary. A code allowlist decides, matching the whole message, not a leading greeting ("hello, what is RL?" is off topic). If the extractor says out of scope but the allowlist matches the whole message, the code wins. A strike needs the extractor to say out of scope; when a guard model exists it must agree; if the guard did not run the extractor alone decides; if unsure, no strike. Pre-verification greetings get a fixed greeting template. |
+| 2026-10-20 | Off-topic rule (human decision). Only clearly off-topic text counts: a substantial request unrelated to insurance claims support. Ambiguous is in scope. Always in scope, never a strike, never sent to a guard model: greetings and goodbyes, yes and no, consent words, hesitation and process questions, identity values, and anything using claims vocabulary. A code allowlist decides, matching the whole message, not a leading greeting ("hello, what is RL?" is off topic). If the extractor says out of scope but the allowlist matches the whole message, the code wins. A strike needs the extractor to say out of scope; when a guard model exists it must agree; if the guard did not run the extractor alone decides; if unsure, no strike. Pre-verification greetings get a fixed greeting template. | Note: with the guard model cut, no guard agreement is needed; the extractor alone decides.
 | 2026-10-20 | VER-06 reading (human decision, a Tier 1 reading, not a waiver): VER-06 forbids naming the failed item or revealing a stored value. The count ("N of 3 confirmed") and the list of outstanding options are required by the design and are allowed. When a caller supplies several items in one message, the reply states only the total count. |
 | 2026-10-20 | NFR-01 accepted Tier 2 deviation (human decision): a flagged post-verification reply is regenerated once, so the worst case after verification is 3 LLM calls on that turn, normally 2. Pre-verification turns make exactly 1 call. |
+| 2026-10-20 | Tier 1 downgrade, made explicitly by the human: the guard-model guardrail stage is cut (Groq guard model comparison, 60-message labeled corpus, webhook, GUARD_MODE, old SAFE-07 to SAFE-11, old UI-10, and the NFR-01 amendment). NFR-01 stays at most 2 calls per turn, with the regeneration deviation row above unchanged. |
+| 2026-10-20 | GR-lite replaces it (human decision): a code-only stage after CP5 and before CP6, no extra model calls. Pattern list for system probes and harmful requests with a fixed refusal, no state change and a fixed notice (SAFE-07 Tier 1, SAFE-08 and SAFE-09 Tier 2); one redacted stdout log line per flagged message; fixed supportive self-harm reply with human offer; F8 fix ("show me all my claims" is not injection; injection carrying an off-topic request still earns the strike); "Message flagged" inline event. Tests: about 30 labeled phrases, 15 benign controls, zero false positives. |
+| 2026-10-20 | CP3 stays small (human decision): match follow-up questions to `required_document_guideline.json`, recommend a human representative when items or substitutes cannot be obtained, keep the existing other-party refusal. |
+| 2026-10-20 | CP6 scope (human decision): keep README, hosted deploy steps, final Try script, turn cap (NFR-08). Cut: glass CSS (keep the solid Fog look; Tier 2 waiver of the UI glass line above, logged here), the throttle (NFR-08 trimmed), and the full NFR measurement (report only what is free: calls per turn, suite time). F10 (denial cause in the case bundle summary) deferred as accepted, allowed by section 4.3. |
+| 2026-10-20 | Process (human decision): reviewer runs on CP4 (consent and email are Tier 1) and once on the full tree before the deploy; tester runs the full suite once per stage; live canaries limited to 4 per stage. Stage order: CP2, CP4, CP5, CP3, GR-lite, CP6. |
 | 2026-10-20 | Empathy lines (human decision): the fixed empathy lines in the pre-verification templates are the human's design and override the "specific to what the caller said" wording in FRONTEND_GUIDELINES section 8, for the pre-verification templates only. |
+| 2026-10-20 | Guardrail (human decision): guard model `openai/gpt-oss-safeguard-20b` (Preview on Groq, to be stated in the README). Build as its own stage after CP4, before CP5. Guard failure, timeout or rate limit means benign (SAFE-09). Logging exception: flagged messages only are logged, redacted and cut to 500 characters, to stdout and an optional webhook (SAFE-10). NFR-01 amended to at most 3 calls. The human asked for SAFE-07 to SAFE-10; the failure rule became its own ID, so the set is SAFE-07 to SAFE-11. | SUPERSEDED by the GR-lite row below (2026-10-20).
+| 2026-10-20 | LANG-02 scan scope (human decision): the scan excludes the Try menu caller messages (`insurance_claims/ui/trymenu.py` sample input), because they are the caller's sample input taken from the assignment's demo utterance. All agent, template, UI and prompt text stays scanned. |
+| 2026-10-20 | Stale case_id hint (human decision): when a stored `case_id` hint matches no claim of the verified party (including another party's id), code drops that hint from stored memory and the reply is one fixed question (`CASE_QUESTION` in `cases.py`, no model text, no claim data). Later turns resolve normally once a new case_id or other usable hints are stated. The status row shows the raw stored hint, so it no longer shows a dropped one. On the verification turn the hint is dropped but the normal reply is used, so the verification confirmation is kept. |
 
 Changelog:
 - 2026-10-20 CP1: added `insurance_claims/views.py` (view models, phase and factor constants, `build_view`) to keep `state.py` under the length rule. `state.py` re-exports `Event` and `SessionView`.
@@ -295,4 +313,11 @@ Changelog:
 - 2026-10-20 CP1: added public method `Session.phase_done(phase)` so `views.py` can derive phase status without reading private state.
 - 2026-10-20 CP1: added extractor fields `asked_about_factor` (nullable enum of the five factor names) and `requests_protected` (boolean) to 4.2, the minimum needed to tell a clarifying question or a protected-data request apart from a partial answer.
 - 2026-10-20 CP1: before verification the whole reply is built by code from fixed templates (`prompts/verify_templates.json`, `templates.py`) with no responder LLM call, so the VERIFY_ID responder bundle of 4.3 no longer exists. Reason: live runs showed free model text invented content and false statements.
+- 2026-10-20 CP2: added modules `tools`, `cases`, `bundles`, `grounding`, `grounded` (case resolution, per-phase bundles, number grounding check, code-built fallback reply). `build_bundle` moved from `phases.py` to `bundles.py`.
+- 2026-10-20 CP2: added `Session.extracted_fields` and `SessionView.extracted_fields` (field names only) for the UI-05 sidebar list.
+- 2026-10-20 CP2: intent fallback in code (case resolved, no intent extracted, status hint denied gives `denial_question`) and status aliases `rejected` and `declined` map to `denied`.
+- 2026-10-20 CP2: the RESOLVE_INTENT bundle carries no first name (4.3 says it does); the full stored name appears only on the verification turn, as in the CP1 entry below.
 - 2026-10-20 CP1: on the verification turn only, the post-verification bundle carries the full stored name and `verified_this_turn`, instead of the first name in 4.3. Reason: splitting the name produced a wrong greeting for multi-part names.
+- 2026-10-20 CP2 fix round 1: LANG-02 scan excludes the Try menu caller messages (see decision log). Added `Session.case_hint_dropped` (bool, set by code for one turn) and `CASE_QUESTION` for the stale case_id hint rule. Added `GUARD_MODE` to the config list (guardrail stage).
+
+- 2026-10-20 Guardrail replaced: module `guard` becomes `gr_lite` (code only); SAFE-07 to SAFE-09 rewritten, old SAFE-07..11 and UI-10 superseded, NFR-01 back to 2 calls, `GUARD_MODEL`, `GUARD_WEBHOOK_URL`, `GUARD_MODE` removed from config, NFR-08 throttle removed, glass CSS waived.

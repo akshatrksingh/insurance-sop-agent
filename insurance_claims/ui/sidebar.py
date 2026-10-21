@@ -44,11 +44,21 @@ def _progress_section(view: SessionView) -> None:
     st.markdown(''.join(parts), unsafe_allow_html=True)
 
 
+def _details_section(view: SessionView) -> None:
+    """Render the Show details toggle and, when on, the extractor field names of the last turn."""
+    st.toggle('Show details', key='show_details')
+    if st.session_state.get('show_details'):
+        st.markdown('<div class="cs-side-title">Extractor fields, last turn</div>', unsafe_allow_html=True)
+        names = ', '.join(view.extracted_fields) or 'none'
+        st.markdown(f'<div class="cs-note">{html.escape(names)}</div>', unsafe_allow_html=True)
+
+
 def render_sidebar(view: SessionView) -> None:
     """Render the native sidebar. The token field is stored under `st.session_state.api_token`."""
     with st.sidebar:
         _memory_section(view)
         _progress_section(view)
+        _details_section(view)
         render_try_menu()
         st.markdown('<div class="cs-side-title">Settings</div>', unsafe_allow_html=True)
         st.text_input(

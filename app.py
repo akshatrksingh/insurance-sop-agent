@@ -7,6 +7,7 @@ st.session_state keys:
     unsent:    the caller text of a turn that failed, shown in the transcript, or None.
     try_choice: the message picked in the Try menu, or None.
     chat_text: the chat input's text, set by the Try menu to paste a message.
+    show_details: the Show details toggle in the sidebar (detail events and extractor field names).
 """
 
 import html
@@ -91,4 +92,4 @@ def key_missing() -> bool:
 notice = st.session_state.notice or (MISSING_KEY if key_missing() else None)
 if notice:
     st.error(notice)
-render_transcript(view, st.session_state.unsent)
+render_transcript(view, st.session_state.unsent, bool(st.session_state.get('show_details')))

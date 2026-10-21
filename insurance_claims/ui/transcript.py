@@ -20,12 +20,13 @@ def _event_row(event: Event) -> str:
     return f'<div class="cs-event {kind}">{_escape(event.text)}</div>'
 
 
-def render_transcript(view: SessionView, unsent: str | None = None) -> None:
+def render_transcript(view: SessionView, unsent: str | None = None, show_details: bool = False) -> None:
     """Render the speaker rows and key events in order, then any unsent caller text.
 
     Args:
         view: The session view.
         unsent: Caller text of a failed turn, shown after the turns, or None.
+        show_details: When True, detail events are shown inline too.
     """
     if not view.turns and not unsent:
         st.markdown(
@@ -33,7 +34,7 @@ def render_transcript(view: SessionView, unsent: str | None = None) -> None:
             unsafe_allow_html=True,
         )
         return
-    key_events = [e for e in view.events if e.level == 'key']
+    key_events = [e for e in view.events if show_details or e.level == 'key']
     rows = []
     for index, (who, text) in enumerate(view.turns):
         rows += [_event_row(e) for e in key_events if e.at == index]

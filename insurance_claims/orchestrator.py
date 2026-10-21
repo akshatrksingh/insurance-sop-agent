@@ -6,7 +6,10 @@ from pydantic import BaseModel
 
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
 from insurance_claims.extractor import Extraction
-from insurance_claims.phases import build_bundle, update_state
+from insurance_claims.bundles import build_bundle
+from insurance_claims.cases import CASE_QUESTION
+from insurance_claims.grounded import field_reply, first_reply
+from insurance_claims.phases import mark_answered, update_state
 from insurance_claims.responder import compose_reply
 from insurance_claims.scope import reconcile
 from insurance_claims.templates import verify_reply
@@ -69,10 +72,18 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
     events = update_state(draft, extraction)
     if draft.phase == 'VERIFY_ID':
         reply = verify_reply(draft, extraction)
+    elif draft.case_hint_dropped and old_phase != 'VERIFY_ID' and not draft.gates.case_resolved:
+        reply = CASE_QUESTION
     else:
         verified_this_turn = old_phase == 'VERIFY_ID'
         prompt_name, bundle = build_bundle(draft, message, verified_this_turn)
-        reply = compose_reply(llm, prompt_name, bundle)
+        if prompt_name == 'process_case' and bundle['first_answer']:
+            reply = first_reply(bundle)  # the first claim answer is built by code from the bundle
+        else:
+            reply = (field_reply(bundle) if prompt_name == 'process_case' else None) or compose_reply(
+                llm, prompt_name, bundle
+            )
+        mark_answered(draft)
     draft.turns.append(('Agent', reply))
     draft.turn_count += 1
     for name in Session.model_fields:
