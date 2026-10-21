@@ -61,11 +61,13 @@ def run_conv(key, llm, cap, lines):
             ls.emit(f'  [flag log] {cap.lines.pop(0)}', lines)
         ls.emit('Agent: ' + rec['reply'], lines)
         kinds, phase, n, secs = rec['kinds'], rec['phase'], rec['calls'], rec['secs']
-        ls.emit(f'  [event kinds={kinds} phase={phase} llm_calls={n} s={secs:.1f}]', lines)
+        ls.emit(f'  [event kinds={kinds} phase={phase} llm_calls={n} model_built={n >= 2} s={secs:.1f}]', lines)
     failures = chk.common(recs) + getattr(chk, check)(recs)
     extra, last = '', recs[-1]
     if key == 'e':
         extra = ' acknowledges_frustration=' + str(chk.acknowledged(last['reply'])) + ' first_sentence=' + chk.first_sentence(last['reply']) + ' CHECK BY HUMAN'
+    if key in 'jk':
+        extra = ' acknowledged_frustration=' + str(chk.acknowledged(last['reply'])) + ' model_path_used=' + str(last['calls'] == 2) + ' last_turn_llm_calls=' + str(last['calls']) + ' first_sentence=' + chk.first_sentence(last['reply']) + ' CHECK BY HUMAN'
     if key == 'd':
         extra = ' sent_to_email_on_file_only=' + str(last['preview_to_on_file'])
     verdict = 'PASS' if not failures else 'FAIL'

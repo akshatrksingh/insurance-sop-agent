@@ -15,6 +15,7 @@ from insurance_claims.phases import update_state
 from insurance_claims.postprocess import decide
 from insurance_claims.scope import emotional_only, reconcile
 from insurance_claims.state import Session
+from insurance_claims.textfilter import clean_reply
 from insurance_claims.turncap import CAP_NOTICE, cap_reached
 from insurance_claims.views import EmailPreview, Event
 
@@ -49,14 +50,19 @@ def _commit(session: Session, draft: Session, old_phase: str) -> None:
 
 def _finish(
     session: Session, draft: Session, old_phase: str, reply: str, events: list[Event], count: bool = True
-) -> None:
-    """Stamp events at the reply position, append the reply, count the turn unless `count` is False, and commit."""
+) -> str:
+    """Stamp events at the reply position, append the reply, count the turn unless `count` is False, and commit.
+
+    Every reply passes the dash filter here (LANG-01), code-built or model-built. Returns the filtered reply.
+    """
+    reply = clean_reply(reply)
     for event in events:
         event.at = len(draft.turns)
     draft.events += events
     draft.turns.append(('Agent', reply))
     draft.turn_count += 1 if count else 0
     _commit(session, draft, old_phase)
+    return reply
 
 
 def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> TurnResult:
@@ -94,19 +100,18 @@ def handle_turn(session: Session, text: str, llm: OpenAICompatLLM | FakeLLM) -> 
     category = gr_lite.classify(message)  # SAFE-07: decided before any model call
     flagged = gr_lite.respond(draft, category, message) if category else None
     if flagged:  # fixed reply, no state change beyond the transcript, no turn counted
-        _finish(session, draft, old_phase, flagged[0], flagged[1], count=False)
-        return TurnResult(reply=flagged[0], events=flagged[1])
+        shown = _finish(session, draft, old_phase, flagged[0], flagged[1], count=False)
+        return TurnResult(reply=shown, events=flagged[1])
     if old_phase in ('ESCALATED', 'COMPLETE'):
         reply = CLOSED if old_phase == 'COMPLETE' else HANDOFF_AGAIN
-        _finish(session, draft, old_phase, reply, [])
-        return TurnResult(reply=reply)
+        return TurnResult(reply=_finish(session, draft, old_phase, reply, []))
     extraction = reconcile(_read(llm, message, session), message)
     complaint = emotional_only(extraction, message)
     if complaint:  # a feeling about the service is never an off-topic strike
         extraction = extraction.model_copy(update={'in_scope': True})
     events = update_state(draft, extraction)
     reply, more, preview = build_reply(draft, extraction, message, old_phase, llm, complaint)
-    _finish(session, draft, old_phase, reply, more)
+    reply = _finish(session, draft, old_phase, reply, more)
     return TurnResult(reply=reply, events=events + more, email_preview=preview)
 
 
@@ -142,7 +147,7 @@ def handle_choice(session: Session, choice: str) -> TurnResult:
     reply, events, preview = decide(draft, choice)
     draft.human_offered = False  # the click answers the email question, so no human offer stays open
     draft.pending_question = None if draft.gates.email_choice_made else 'email'
-    _finish(session, draft, old_phase, reply, events)
+    reply = _finish(session, draft, old_phase, reply, events)
     return TurnResult(reply=reply, events=events, email_preview=preview)
 
 

@@ -57,7 +57,8 @@ def test_int_02_zero_matches_for_case_id_asks_fixed_question_with_no_claim_data(
     s, llm, rs = run([('go', VERIFIED_ONLY), ('x', {'hints': hints})])
     n_before = len(bundles_for(llm, 'resolve_intent')) + len(bundles_for(llm, 'process_case'))
     assert n_before == 1
-    assert rs[1].reply == CASE_QUESTION and rs[1].reply.count('?') == 1
+    want = f"I can only discuss your own claim, so I cannot share anyone else's. {CASE_QUESTION}" if hints['case_id'] == 'CL-3001' else CASE_QUESTION
+    assert rs[1].reply == want and rs[1].reply.count('?') == 1
     assert s.view().phase == 'RESOLVE_INTENT' and 'Resolved case' not in rows(s)
     assert not any(c in rs[1].reply for c in ('CL-2048', 'CL-2011', 'CL-1899', 'CL-2102', 'CL-3001', 'CL-9999'))
 

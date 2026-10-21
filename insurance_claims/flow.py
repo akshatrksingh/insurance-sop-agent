@@ -3,7 +3,7 @@
 Code decides every gate here. The model only phrases replies for a verified caller's case answers.
 """
 
-from insurance_claims import handoff, postprocess, scope, tools
+from insurance_claims import handoff, other_party, postprocess, scope, tools
 from insurance_claims.bundles import build_bundle
 from insurance_claims.cases import CASE_QUESTION
 from insurance_claims.extractor import Extraction
@@ -139,4 +139,7 @@ def build_reply(session: Session, ex: Extraction, message: str, old_phase: str, 
         return safe_reply(reply, verify_reply(session, Extraction(requests_protected=True))), [], None
     if pending and session.pending_question == 'email':
         return postprocess.decide(session, postprocess.read_consent(ex.consent, message))
-    return _verified_flow(session, ex, message, old_phase, llm)
+    reply, events, preview = _verified_flow(session, ex, message, old_phase, llm)
+    if other_party.asks_other_party(session, ex, message):  # B38: one fixed refusal line, then the own-claim reply
+        reply = other_party.with_refusal(reply)
+    return reply, events, preview

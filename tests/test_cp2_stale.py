@@ -6,6 +6,12 @@ from insurance_claims.cases import CASE_QUESTION
 
 BAD = ['CL-9999', 'CL-3001']
 DROPPED = 'Dropped: case_id (no such claim)'
+REFUSAL = "I can only discuss your own claim, so I cannot share anyone else's."
+
+
+def expected(bad):
+    """Fixed reply on the dropping turn: another party's id gets the B38 refusal line first."""
+    return f'{REFUSAL} {CASE_QUESTION}' if bad == 'CL-3001' else CASE_QUESTION
 
 
 def calls(llm):
@@ -24,14 +30,14 @@ def test_int_02_dropped_hint_leaves_memory_and_row(bad):
 def test_int_02_question_asked_once_then_normal_flow(bad):
     """INT-02: the fixed question appears on the dropping turn only. The next turn does not repeat it."""
     s, _, rs = run([('go', VERIFIED_ONLY), ('x', {'hints': {'case_id': bad}}), ('y', {})])
-    assert rs[1].reply == CASE_QUESTION and rs[2].reply != CASE_QUESTION
+    assert rs[1].reply == expected(bad) and rs[2].reply != CASE_QUESTION and REFUSAL not in rs[2].reply
 
 
 @pytest.mark.parametrize('bad', BAD)
 def test_int_02_no_model_call_on_the_dropping_turn(bad):
     """INT-02 / NFR-01: the dropping turn makes no responder call."""
     _, llm, rs = run([('go', VERIFIED_ONLY), ('x', {'hints': {'case_id': bad}})])
-    assert calls(llm) == 1 and rs[1].reply == CASE_QUESTION
+    assert calls(llm) == 1 and rs[1].reply == expected(bad)
 
 
 @pytest.mark.parametrize('bad', BAD)

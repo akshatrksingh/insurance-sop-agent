@@ -5,21 +5,16 @@ import re
 
 from insurance_claims.grounded import fallback_reply
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
+from insurance_claims.textfilter import clean_reply  # noqa: F401
 from insurance_claims.grounding import misses_deadline, ungrounded
 
 logger = logging.getLogger(__name__)
 
-_DASHES = re.compile('\\s*[\u2013\u2014]\\s*')
 _PLEASE = re.compile(r'\bplease\b', re.I)
 _TIME_GREETING = re.compile(r'\bgood\s+(morning|afternoon|evening|night|day)\b', re.I)
 _OPENER = re.compile(r'^\W*(hello|hi|hey|greetings|welcome)\b', re.I)
 _VERIFIED = re.compile(r'\bverified\b', re.I)
 _EMOTION = re.compile(r'\b(frustrat\w*|anxious|anxiety|angry|anger|confus\w*|upset)\b', re.I)
-
-
-def clean_reply(text: str) -> str:
-    """Replace em and en dashes with a comma (LANG-01) and trim whitespace."""
-    return _DASHES.sub(', ', text).strip()
 
 
 def banned_reason(text: str, bundle: dict) -> str | None:

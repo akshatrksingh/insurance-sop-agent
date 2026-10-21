@@ -1,4 +1,4 @@
-"""Final pass: tests/live_final.py is gated (NFR-06, SAFE-04), lists a to i, and is not collected. Nothing here calls a model."""
+"""Final pass: tests/live_final.py is gated (NFR-06, SAFE-04), lists a to k, and is not collected. Nothing here calls a model."""
 import os
 import subprocess
 import sys
@@ -29,11 +29,11 @@ def test_nfr_06_live_final_refuses_with_a_key_but_without_run_live():
 
 
 def test_nfr_06_live_final_lists_the_nine_conversations():
-    """NFR-06: --list names conversations a to i without needing RUN_LIVE."""
+    """NFR-06: --list names conversations a to k without needing RUN_LIVE."""
     r = run('--list')
     assert r.returncode == 0
     letters = [line.split()[0] for line in r.stdout.splitlines() if line.strip()]
-    assert letters == list('abcdefghi'), letters
+    assert letters == list('abcdefghijk'), letters
 
 
 def test_nfr_05_live_final_files_are_short_dashless_and_print_free():
