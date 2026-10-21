@@ -166,6 +166,9 @@ def test_carry_resolve_reply_without_verification_sentence_on_first_turn_is_not_
     assert r.reply == ok
 
 
+GUIDANCE_QUESTIONS = ('how long after I submit', 'what file format do you accept')
+
+
 @pytest.mark.parametrize('question', ['how long after I submit', 'what file format do you accept', 'what is my name', 'will it be paid in 10 days'])
 def test_carry_procedural_questions_after_verification_answer_only_from_tool_data(question):
     """Carry-over / CASE-01: a procedural question after verification never delivers invented time frames or formats."""
@@ -173,7 +176,19 @@ def test_carry_procedural_questions_after_verification_answer_only_from_tool_dat
     invented = 'You are verified, Margaret Chen. It takes 10 business days and PDF files are accepted. The appeal deadline 2026-03-18 has passed.'
     s, llm, rs = run(turns, {question: invented})
     r = rs[1].reply
-    assert '10 business days' not in r and 'PDF' not in r and 'CL-2048' in r
+    assert '10 business days' not in r and 'PDF files are accepted' not in r and 'CL-2048' in r
+    if question in GUIDANCE_QUESTIONS:
+        # CASE-02: answered by code from the guideline file with no model call, so every number and format word must be fixture text.
+        from conftest import ROOT
+        fixture = (ROOT / 'insurance_claims' / 'fixtures' / 'required_document_guideline.json').read_text(encoding='utf-8')
+        claims = (ROOT / 'insurance_claims' / 'fixtures' / 'claims.json').read_text(encoding='utf-8')
+        source = fixture + claims
+        import re
+        for num in re.findall(r'\d+', r):
+            assert num in source, f'number {num} not from fixture text'
+        for word in re.findall(r'\b(?:PDF|pdf|scan|photo|photos|image|JPEG|JPG|PNG|TIFF|format|formats)\b', r):
+            assert word in source, f'format word {word} not from fixture text'
+        return
     assert bundles_for(llm, 'process_case')[-1]['claim']['case_id'] == 'CL-2048'
 
 

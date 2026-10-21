@@ -30,3 +30,8 @@ Deferred until all MVP stages are done. Format: stage, id, description, source.
 - CP5, B13: the emotion-only rule relies on a request-word list; an emotional message with an off-topic request that has no question word earns no strike. Accepted, low risk.
 - CP5, B14: before CP3 starts, split `scope.py` (182 of 200 lines) by concern, no behavior change. Carried to the next session as the first task.
 - CP4, B15: show the email skip path live ("no thanks") in the final tester pass; offline only so far.
+- CP3, B16: a bare "how long does it take?" (no document word) under a denial_question session takes the model path, not the processing-time topic. CP3 coder observation.
+- CP3, B17: guided replies are fixture text and skip the LANG-01 and LANG-02 filter; fixture line has a trailing "-ing" clause. Reviewer T3-5.
+- CP3, B18: no test names CASE-02 or CASE-03 in the docstring of the guidance tests beyond tests/test_cp3_*.py; check NFR-07 in the final pass. Reviewer T3-8.
+- CP3, B19: DOC_WORDS in guidance.py is broad (send, mail, confirm, files), widening topic matches; the processing-time template says "reconsidering the denial" without checking status is denied. Reviewer T3-3, T3-4.
+- CP3, B20: a topic phrase plus a field word ("how do I submit the documents?") still matches its topic; "can you file it" gets the weak fallback. Coder observations.

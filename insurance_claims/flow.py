@@ -3,10 +3,11 @@
 Code decides every gate here. The model only phrases replies for a verified caller's case answers.
 """
 
-from insurance_claims import handoff, postprocess, scope
+from insurance_claims import handoff, postprocess, scope, tools
 from insurance_claims.bundles import build_bundle
 from insurance_claims.cases import CASE_QUESTION
 from insurance_claims.extractor import Extraction
+from insurance_claims.fields import asked_field
 from insurance_claims.grounded import field_reply, first_reply
 from insurance_claims.leakscan import safe_reply
 from insurance_claims.llm import FakeLLM, OpenAICompatLLM
@@ -32,10 +33,36 @@ def _failed_round_over_limit(session: Session) -> bool:
     return failed_now and session.failed_rounds >= verify_fail_limit()
 
 
-def _answer(session: Session, message: str, verified_now: bool, llm: OpenAICompatLLM | FakeLLM) -> str:
+def _guided(session: Session, bundle: dict) -> tuple[str, list[Event]] | None:
+    """Answer a document follow-up from the guideline file (CASE-02), or None to use the other paths.
+
+    A cannot-obtain message (CASE-03) opens the human offer through the one pending question.
+    """
+    if bundle['first_answer']:
+        return None
+    found = tools.get_guidance(bundle['claim'], session.intent, bundle['caller_message'])
+    if not found or 'error' in found or (not found['human'] and asked_field(bundle['caller_message'])):
+        return None  # a single-field question keeps its own code answer
+    if found['human']:
+        session.human_offered = True
+        session.pending_question = 'human'
+    events = [Event(kind='guidance', text=f"Guidance matched: {found['topic']}", level='detail')]
+    return ' '.join(found['texts']), events
+
+
+def _answer(
+    session: Session, message: str, verified_now: bool, llm: OpenAICompatLLM | FakeLLM
+) -> tuple[str, list[Event]]:
     """Build the case or intent reply for a verified caller and mark the case answered."""
     prompt_name, bundle = build_bundle(session, message, verified_now)
     is_case = prompt_name == 'process_case'
+    guided = _guided(session, bundle) if is_case else None
+    if guided:
+        reply, events = guided
+        if empathy_line(session):
+            reply = f'{empathy_line(session)} {reply}'
+        mark_answered(session)
+        return reply, events
     # The first claim answer and single-field answers are built by code from the bundle.
     reply = first_reply(bundle) if is_case and bundle['first_answer'] else (field_reply(bundle) if is_case else None)
     if reply is None:
@@ -45,7 +72,7 @@ def _answer(session: Session, message: str, verified_now: bool, llm: OpenAICompa
     if session.phase == 'PROCESS_CASE':
         postprocess.note_topic(session, message)
     mark_answered(session)
-    return reply
+    return reply, []
 
 
 def _verified_flow(session: Session, ex: Extraction, message: str, old_phase: str, llm: OpenAICompatLLM | FakeLLM) -> Result:
@@ -54,12 +81,12 @@ def _verified_flow(session: Session, ex: Extraction, message: str, old_phase: st
         return CASE_QUESTION, [], None
     finished = ex.wants_to_end or scope.kind(message) == 'closing'
     only_done = finished and session.phase == 'PROCESS_CASE' and session.gates.case_answered
-    reply = '' if only_done else _answer(session, message, old_phase == 'VERIFY_ID', llm)
+    reply, events = ('', []) if only_done else _answer(session, message, old_phase == 'VERIFY_ID', llm)
     if finished and session.phase == 'PROCESS_CASE' and session.gates.case_answered:
         session.gates.caller_done = True
-    events: list[Event] = []
     if session.phase == 'POST_PROCESS' and not session.gates.email_offered:
-        text, events = postprocess.offer(session)
+        text, offer_events = postprocess.offer(session)
+        events = events + offer_events
         reply = f'{reply} {text}'.strip()
     return reply, events, None
 

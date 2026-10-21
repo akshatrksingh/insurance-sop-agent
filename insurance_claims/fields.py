@@ -41,3 +41,9 @@ def asked_field(message: str) -> str | None:
         return None
     found = [f for f, pattern in FIELD_WORDS.items() if re.search(pattern, text)]
     return found[0] if len(found) == 1 else None
+
+
+def mentions_field(message: str) -> bool:
+    """True when the message uses the words of any claim field, alone or with others."""
+    text = re.sub(r'\s+', ' ', message.lower())
+    return any(re.search(pattern, text) for pattern in FIELD_WORDS.values())

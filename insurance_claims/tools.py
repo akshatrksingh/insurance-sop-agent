@@ -5,8 +5,9 @@ import logging
 from datetime import date
 from functools import lru_cache
 
-from insurance_claims.data import FIXTURES, get_party
+from insurance_claims.data import FIXTURES
 from insurance_claims.grounded import join_items
+from insurance_claims.guidance import get_guidance as match_guidance
 from insurance_claims.state import Session
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,23 @@ def get_claim(party_id: str | None, case_id: str | None) -> dict:
             return {k: v for k, v in claim.items() if k != 'party_id'}
     logger.info('Claim lookup found nothing (case=%s)', case_id)
     return error_result('NOT_FOUND', 'No such claim for this party.', 'Ask the caller which claim they mean.')
+
+
+def get_guidance(claim: dict, intent: str | None, message: str) -> dict | None:
+    """Return matched follow-up guidance for the resolved claim, the fallback, or None (CASE-02, CASE-03).
+
+    Args:
+        claim: The resolved claim from `get_claim`.
+        intent: The session intent.
+        message: The caller's message.
+
+    Returns:
+        A dict with `topic`, `texts` and `human`, or None when the message is not a document follow-up.
+        An error dict (`NO_CLAIM`) when the claim is an error result.
+    """
+    if not claim or 'error' in claim:
+        return error_result('NO_CLAIM', 'No resolved claim for guidance.', 'Resolve the case first.')
+    return match_guidance(claim, intent, message)
 
 
 def build_summary(session: Session) -> dict:
