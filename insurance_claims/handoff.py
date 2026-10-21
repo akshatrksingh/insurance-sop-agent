@@ -3,6 +3,8 @@
 All text is fixed. No model text is used for a decline, an offer, or a handoff.
 """
 
+import re
+
 from insurance_claims.config import off_topic_limit
 from insurance_claims.extractor import Extraction
 from insurance_claims.postprocess import is_decline
@@ -24,6 +26,20 @@ VERIFY_HUMAN_OFFER = (
 )
 HANDOFF_AGAIN = 'A human representative has this conversation now.'
 CLOSED = 'This conversation has ended. Use Reset to start a new one.'
+
+
+_YES_WORDS = ('yes', 'yeah', 'yep', 'sure', 'ok', 'okay')
+AFFIRMATIVES = frozenset(
+    {'go ahead', 'please do', 'connect me', 'please connect me', 'yes please'}
+    | set(_YES_WORDS)
+    | {f'{word} {tail}'.strip() for word in _YES_WORDS for tail in ('please', 'connect me', 'please connect me')}
+)
+
+
+def is_affirmative(message: str) -> bool:
+    """True when the whole message is a plain yes such as "yes please" or "connect me"."""
+    text = message.lower().replace('\u2019', "'").replace('\u2018', "'").replace("'", '')
+    return ' '.join(re.sub(r'[^\w\s]', ' ', text).split()) in AFFIRMATIVES
 
 
 RESISTANCE_LIMIT = 3  # the first resistance round plus 2 further rounds
@@ -71,8 +87,8 @@ def human_answer(session: Session, extraction: Extraction, message: str = '') ->
     """
     if session.pending_question != 'human' or session.escalated:
         return None
-    if extraction.consent == 'yes':
-        return 'yes'
+    if extraction.consent == 'yes' or (extraction.consent is None and is_affirmative(message)):
+        return 'yes'  # the plain yes fallback covers an extractor that reports no consent
     declined = extraction.consent == 'no' or (extraction.consent is None and is_decline(message))
     return 'no' if declined else None
 
