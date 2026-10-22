@@ -18,25 +18,24 @@ def prose():
 
 
 def test_del_01_readme_has_run_command_and_settings():
-    """DEL-01: README exists and names streamlit run app.py, LLM_API_KEY and TRY_MENU."""
-    for needle in ('streamlit run app.py', 'pip install -r requirements.txt', 'LLM_API_KEY', 'TRY_MENU', 'MAX_TURNS'):
+    """DEL-01: README exists and names streamlit run app.py, pip install -r requirements.txt, LLM_API_KEY and the live URL."""
+    for needle in ('streamlit run app.py', 'pip install -r requirements.txt', 'LLM_API_KEY', 'https://insurance-sop-agent.streamlit.app/'):
         assert needle in README, needle
 
 
 def test_del_01_readme_token_order_is_secrets_then_env_then_sidebar():
-    """DEL-01: README gives the token order secrets, env var, sidebar field, in that order."""
-    low = README.lower()
-    a, b, c = low.index('secrets'), low.index('environment variable'), low.index('sidebar')
-    assert a < b < c
+    """DEL-01: README states the key order secrets, environment variable, sidebar field, in that order."""
+    m = re.search(r'order: (.*?)\.', README, re.S)
+    assert m, 'no key order sentence'
+    low = m.group(1).lower()
+    assert low.index('secrets') < low.index('environment variable') < low.index('sidebar field')
 
 
-def test_del_01_readme_has_community_cloud_steps():
-    """DEL-01: README has Streamlit Community Cloud deploy steps with repo, main file, and secrets."""
-    assert 'Community Cloud' in README and 'share.streamlit.io' in README
-    section = README[README.index('Community Cloud'):]
-    for needle in ('app.py', 'Secrets', 'LLM_API_KEY', 'GitHub'):
-        assert needle in section, needle
-    assert len(re.findall(r'^\d+\. ', section, re.M)) >= 4
+def test_del_01_readme_has_live_url_and_fixture_free_text():
+    """DEL-01: README links the live demo and names no fixture person."""
+    assert 'https://insurance-sop-agent.streamlit.app/' in README
+    for name in ('Margaret', 'Chen', 'Ava Lopez', 'Ma Tian', 'Ya Wen', 'Yaven'):
+        assert name not in README, name
 
 
 def test_del_01_requirements_has_only_the_four_dependencies():
@@ -97,10 +96,8 @@ def test_safe_04_token_absent_from_ui_notices_state_readme_and_logs(monkeypatch,
     assert FAKE not in repr(state_of(at))
 
 
-def test_del_01_readme_byok_and_deploy_steps():
-    """DEL-01: README mentions console.groq.com and a throwaway key, keeps TRY_MENU off in the deploy steps and no longer tells the user to add LLM_API_KEY."""
-    assert 'console.groq.com' in README and 'throwaway' in README
-    deploy = README[README.index('## Deploy to Streamlit Community Cloud'):]
-    assert 'TRY_MENU = "off"' in deploy
-    assert not re.search(r'add\s+`?LLM_API_KEY', deploy, re.I)
-    assert 'LLM_API_KEY = ' not in deploy
+def test_del_01_readme_byok_use_section():
+    """DEL-01: README tells visitors to paste their own key from console.groq.com into the Groq API key field and says it stays in the session."""
+    assert 'console.groq.com' in README and 'Groq API key' in README
+    assert re.search(r'key stays in your browser session', README)
+    assert 'LLM_API_KEY = ' not in README
